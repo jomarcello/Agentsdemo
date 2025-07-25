@@ -1,7 +1,7 @@
 export const practiceConfig = {
-  name: "Beauty Clinic Test",
-  type: "cosmetic",
-  primaryColor: "#7c3aed",
+  name: "Test Client A",
+  type: "general", 
+  primaryColor: "#2563eb",
   
   // Contact info
   phone: "+44 20 7000 0000",
@@ -14,7 +14,7 @@ export const practiceConfig = {
   services: [
     "General Consultations",
     "Health Screenings", 
-    "Treatment Planning",
+    "Treatment Planning", 
     "Follow-up Care"
   ],
   
