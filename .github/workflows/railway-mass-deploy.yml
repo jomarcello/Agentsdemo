@@ -152,10 +152,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Detect changed practice
-        id: detect
+      - name: Check if new practice was added
+        id: check
         run: |
-          echo "🔍 Detecting which practice was added/changed..."
+          echo "🔍 Checking if a new practice was added..."
           
           # Get the diff of practice-config.ts
           git fetch origin main
@@ -164,8 +164,20 @@ jobs:
           echo "Git diff output:"
           echo "$DIFF_OUTPUT"
           
-          # Extract practice ID from added lines (lines starting with +)
-          NEW_PRACTICE=$(echo "$DIFF_OUTPUT" | grep "^+" | grep -o "'[a-z-]*':" | head -1 | sed "s/'//g" | sed "s/://g")
+          # Check if this is actually adding a new practice (not just comment changes)
+          NEW_PRACTICE_ADDED=$(echo "$DIFF_OUTPUT" | grep "^+" | grep -E "'[a-z-]+(-[a-z]+)*':\s*{" | head -1)
+          
+          if [ -z "$NEW_PRACTICE_ADDED" ]; then
+            echo "❌ No new practice detected - skipping deployment"
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "✅ New practice detected: $NEW_PRACTICE_ADDED"
+          echo "should_deploy=true" >> $GITHUB_OUTPUT
+          
+          # Extract practice ID from added lines
+          NEW_PRACTICE=$(echo "$NEW_PRACTICE_ADDED" | grep -o "'[a-z-]*':" | head -1 | sed "s/'//g" | sed "s/://g")
           
           if [ -z "$NEW_PRACTICE" ]; then
             # Fallback: check if rotterdam-wellness is in the diff
@@ -202,9 +214,10 @@ jobs:
           esac
 
       - name: Deploy detected practice to Railway
+        if: ${{ steps.check.outputs.should_deploy == 'true' }}
         run: |
-          PRACTICE_ID="${{ steps.detect.outputs.practice_id }}"
-          PRACTICE_NAME="${{ steps.detect.outputs.practice_name }}"
+          PRACTICE_ID="${{ steps.check.outputs.practice_id }}"
+          PRACTICE_NAME="${{ steps.check.outputs.practice_name }}"
           
           echo "🚀 Auto-deploying $PRACTICE_NAME ($PRACTICE_ID)"
           
@@ -298,11 +311,19 @@ jobs:
           
           echo "✅ Domain generation workflow triggered!"
 
+      - name: Skip deployment message
+        if: ${{ steps.check.outputs.should_deploy == 'false' }}
+        run: |
+          echo "⏭️ Skipping deployment - no new practice detected"
+          echo "ℹ️ Only deployments are triggered when new practices are added to practice-config.ts"
+          echo "ℹ️ This prevents unnecessary redeployments of existing practices"
+
       - name: Test auto deployment
+        if: ${{ steps.check.outputs.should_deploy == 'true' }}
         run: |
           echo "🧪 Testing auto deployment..."
-          echo "Practice: ${{ steps.detect.outputs.practice_name }}"
-          echo "URL: https://${{ steps.detect.outputs.practice_id }}-demo-production.up.railway.app"
+          echo "Practice: ${{ steps.check.outputs.practice_name }}"
+          echo "URL: https://${{ steps.check.outputs.practice_id }}-demo-production.up.railway.app"
 
   deploy-all:
     if: ${{ inputs.deploy_all }}
