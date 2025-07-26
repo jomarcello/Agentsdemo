@@ -1,0 +1,137 @@
+name: Railway Mass Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      practice_id:
+        description: 'Practice ID (e.g., advanced-spine-care)'
+        required: true
+        type: string
+      practice_name:
+        description: 'Practice Name (e.g., Advanced Spine Care)'
+        required: true
+        type: string
+      deploy_all:
+        description: 'Deploy all practices (ignores practice_id/name above)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  deploy-single:
+    if: ${{ !inputs.deploy_all }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Railway
+        uses: docker://ghcr.io/railwayapp/cli:latest
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        with:
+          entrypoint: sh
+          args: |
+            -c "
+            echo '🚀 Deploying ${{ inputs.practice_name }} (${{ inputs.practice_id }})'
+            
+            # Initialize Railway project
+            railway init -n '${{ inputs.practice_id }}-demo'
+            
+            # Set environment variables
+            railway variables --set 'PRACTICE_ID=${{ inputs.practice_id }}'
+            railway variables --set 'NODE_ENV=production'
+            
+            # Deploy
+            railway up --detach
+            
+            # Get deployment URL
+            DEPLOYMENT_URL=$(railway status --json | jq -r '.deployments[0].url // empty')
+            if [ -z \"$DEPLOYMENT_URL\" ]; then
+              DEPLOYMENT_URL=\"https://${{ inputs.practice_id }}-demo-production.up.railway.app\"
+            fi
+            
+            echo \"✅ Deployment complete: $DEPLOYMENT_URL\"
+            echo \"deployment_url=$DEPLOYMENT_URL\" >> $GITHUB_OUTPUT
+            
+            # Test HTTP status
+            sleep 30
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' \"$DEPLOYMENT_URL\" || echo '000')
+            echo \"🔍 HTTP Status: $STATUS\"
+            echo \"http_status=$STATUS\" >> $GITHUB_OUTPUT
+            "
+
+      - name: Test deployment
+        run: |
+          echo "🧪 Testing deployment..."
+          echo "Practice: ${{ inputs.practice_name }}"
+          echo "URL: ${{ steps.deploy.outputs.deployment_url }}"
+          echo "Status: ${{ steps.deploy.outputs.http_status }}"
+
+  deploy-all:
+    if: ${{ inputs.deploy_all }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        practice:
+          - { id: 'spinealign', name: 'SpineAlign Center' }
+          - { id: 'smith', name: 'Smith Chiropractic' }
+          - { id: 'smart-cosmetic', name: 'Smart Cosmetic Clinic' }
+          - { id: 'beautymed', name: 'BeautyMed Clinic' }
+          - { id: 'advanced-spine-care', name: 'Advanced Spine Care' }
+          - { id: '111-harley-street', name: '111 Harley Street' }
+          - { id: '152-harley-street', name: '152 Harley Street' }
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy ${{ matrix.practice.name }}
+        uses: docker://ghcr.io/railwayapp/cli:latest
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        with:
+          entrypoint: sh
+          args: |
+            -c "
+            echo '🚀 Deploying ${{ matrix.practice.name }} (${{ matrix.practice.id }})'
+            
+            # Initialize Railway project
+            railway init -n '${{ matrix.practice.id }}-demo'
+            
+            # Set environment variables
+            railway variables --set 'PRACTICE_ID=${{ matrix.practice.id }}'
+            railway variables --set 'NODE_ENV=production'
+            
+            # Deploy
+            railway up --detach
+            
+            # Get deployment URL
+            DEPLOYMENT_URL=$(railway status --json | jq -r '.deployments[0].url // empty')
+            if [ -z \"$DEPLOYMENT_URL\" ]; then
+              DEPLOYMENT_URL=\"https://${{ matrix.practice.id }}-demo-production.up.railway.app\"
+            fi
+            
+            echo \"✅ ${{ matrix.practice.name }} deployed: $DEPLOYMENT_URL\"
+            
+            # Test HTTP status
+            sleep 30
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' \"$DEPLOYMENT_URL\" || echo '000')
+            echo \"🔍 ${{ matrix.practice.name }} Status: $STATUS\"
+            "
+
+  summary:
+    if: ${{ inputs.deploy_all }}
+    needs: deploy-all
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "🎉 Mass deployment complete!"
+          echo "Deployed practices:"
+          echo "- SpineAlign Center: https://spinealign-demo-production.up.railway.app"
+          echo "- Smith Chiropractic: https://smith-demo-production.up.railway.app"  
+          echo "- Smart Cosmetic Clinic: https://smart-cosmetic-demo-production.up.railway.app"
+          echo "- BeautyMed Clinic: https://beautymed-demo-production.up.railway.app"
+          echo "- Advanced Spine Care: https://advanced-spine-care-demo-production.up.railway.app"
+          echo "- 111 Harley Street: https://111-harley-street-demo-production.up.railway.app"
+          echo "- 152 Harley Street: https://152-harley-street-demo-production.up.railway.app"
