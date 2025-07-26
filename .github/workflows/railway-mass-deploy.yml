@@ -33,7 +33,7 @@ jobs:
           echo '🚀 Fully automated deployment for ${{ inputs.practice_name }} (${{ inputs.practice_id }})'
           
           # Create Railway project
-          PROJECT_RESPONSE=$(curl -s -X POST \
+          PROJECT_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{"query":"mutation { projectCreate(input: { name: \"${{ inputs.practice_id }}-demo\" }) { id name } }"}' \
@@ -50,7 +50,7 @@ jobs:
           echo "✅ Created project: $PROJECT_ID"
           
           # Create service with practice-specific name
-          SERVICE_RESPONSE=$(curl -s -X POST \
+          SERVICE_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "{\"query\":\"mutation { serviceCreate(input: { projectId: \\\"$PROJECT_ID\\\", name: \\\"${{ inputs.practice_id }}-demo\\\" }) { id name } }\"}" \
@@ -67,7 +67,7 @@ jobs:
           echo "✅ Created service: $SERVICE_ID"
           
           # Connect GitHub repository
-          CONNECT_RESPONSE=$(curl -s -X POST \
+          CONNECT_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "{\"query\":\"mutation { serviceConnect(id: \\\"$SERVICE_ID\\\", input: { repo: \\\"jomarcello/Agentsdemo\\\", branch: \\\"main\\\" }) { id } }\"}" \
@@ -76,7 +76,7 @@ jobs:
           echo "Connect response: $CONNECT_RESPONSE"
           
           # Set PRACTICE_ID environment variable
-          PRACTICE_VAR_RESPONSE=$(curl -s -X POST \
+          PRACTICE_VAR_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"PRACTICE_ID\\\", value: \\\"${{ inputs.practice_id }}\\\" }) { id name value } }\"}" \
@@ -85,7 +85,7 @@ jobs:
           echo "Practice variable response: $PRACTICE_VAR_RESPONSE"
           
           # Set NODE_ENV environment variable
-          NODE_ENV_RESPONSE=$(curl -s -X POST \
+          NODE_ENV_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"NODE_ENV\\\", value: \\\"production\\\" }) { id name value } }\"}" \
@@ -98,7 +98,7 @@ jobs:
           sleep 10
           
           # Trigger deployment
-          DEPLOY_RESPONSE=$(curl -s -X POST \
+          DEPLOY_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "{\"query\":\"mutation { serviceInstanceDeploy(serviceId: \\\"$SERVICE_ID\\\", latestCommit: true) }\"}" \
@@ -122,8 +122,8 @@ jobs:
           echo ""
           echo "⚡ Auto-triggering domain generation workflow..."
           
-          # Trigger domain generation workflow automatically
-          curl -X POST \
+          # Trigger domain generation workflow automatically (with timeout)
+          curl --connect-timeout 30 --max-time 60 -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Content-Type: application/json" \

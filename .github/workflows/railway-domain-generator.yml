@@ -34,7 +34,7 @@ jobs:
           
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             # Check deployment status
-            SERVICE_STATUS=$(curl -s -X POST \
+            SERVICE_STATUS=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
               -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
               -H "Content-Type: application/json" \
               -d "{\"query\":\"query { service(id: \\\"${{ inputs.service_id }}\\\") { id name activeDeployment { id status url } } }\"}" \
@@ -64,7 +64,7 @@ jobs:
           if [ -z "$EXISTING_URL" ] || [ "$EXISTING_URL" = "null" ] || [ "$EXISTING_URL" = "empty" ]; then
             echo "🌐 No existing URL, generating domain..."
             
-            DOMAIN_RESPONSE=$(curl -s -X POST \
+            DOMAIN_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
               -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
               -H "Content-Type: application/json" \
               -d "{\"query\":\"mutation { serviceDomainCreate(input: { serviceId: \\\"${{ inputs.service_id }}\\\" }) { id domain } }\"}" \
@@ -89,7 +89,7 @@ jobs:
           # Test the URL
           if [[ "$FINAL_URL" == https://* ]]; then
             echo "🧪 Testing URL: $FINAL_URL"
-            STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$FINAL_URL" || echo '000')
+            STATUS=$(curl -s --connect-timeout 10 --max-time 30 -o /dev/null -w '%{http_code}' "$FINAL_URL" || echo '000')
             echo "HTTP Status: $STATUS"
             
             if [ "$STATUS" = "200" ]; then
