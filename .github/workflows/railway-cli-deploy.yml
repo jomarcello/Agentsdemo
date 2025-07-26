@@ -30,8 +30,19 @@ jobs:
         run: |
           echo "🚀 Deploying ${{ inputs.practice_name }} (${{ inputs.practice_id }}) using Railway CLI"
           
-          # Authenticate with token (for CI/CD)
-          export RAILWAY_TOKEN=${{ secrets.RAILWAY_TOKEN }}
+          # Verify token is available
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "❌ RAILWAY_TOKEN not found"
+            exit 1
+          fi
+          
+          # Try browserless login first
+          echo "🔑 Authenticating with Railway..."
+          railway login --browserless || echo "Browserless login failed, trying token auth"
+          
+          # Alternative: Try setting up config manually
+          mkdir -p ~/.config/railway
+          echo "accessToken: $RAILWAY_TOKEN" > ~/.config/railway/config.json
           
           # Initialize new project
           PROJECT_NAME="${{ inputs.practice_id }}-demo"
