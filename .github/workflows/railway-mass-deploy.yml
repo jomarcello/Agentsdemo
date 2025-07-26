@@ -49,11 +49,11 @@ jobs:
           
           echo "✅ Created project: $PROJECT_ID"
           
-          # Create service
+          # Create service with practice-specific name
           SERVICE_RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { serviceCreate(input: { projectId: \\\"$PROJECT_ID\\\", name: \\\"web\\\" }) { id name } }\"}" \
+            -d "{\"query\":\"mutation { serviceCreate(input: { projectId: \\\"$PROJECT_ID\\\", name: \\\"${{ inputs.practice_id }}-demo\\\" }) { id name } }\"}" \
             https://backboard.railway.app/graphql/v2)
           
           echo "Service response: $SERVICE_RESPONSE"
@@ -105,14 +105,37 @@ jobs:
           
           echo "Deploy response: $DEPLOY_RESPONSE"
           
-          # Expected URL format  
-          DEPLOYMENT_URL="https://${{ inputs.practice_id }}-demo-production.up.railway.app"
-          echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          # Railway generates URLs based on service name + environment + random suffix
+          # Format: {service-name}-{environment}-{random}.up.railway.app
+          EXPECTED_URL_PATTERN="https://${{ inputs.practice_id }}-demo-production-*.up.railway.app"
+          echo "deployment_url_pattern=$EXPECTED_URL_PATTERN" >> $GITHUB_OUTPUT
           
           echo "✅ Fully automated deployment initiated!"
-          echo "🔗 Project URL: https://railway.app/project/$PROJECT_ID"
-          echo "🌐 Expected App URL: $DEPLOYMENT_URL"
+          echo "🔗 Project URL: https://railway.app/project/$PROJECT_ID"  
+          echo "🌐 URL Pattern: $EXPECTED_URL_PATTERN"
+          echo "🌐 Actual URL will be visible in Railway dashboard after deployment"
           echo "⏳ Deployment will be ready in ~2-3 minutes"
+          
+          # Wait for deployment to get actual URL
+          echo "⏳ Waiting 120 seconds for deployment to complete and get actual URL..."
+          sleep 120
+          
+          # Try to get the actual deployment URL from Railway API
+          SERVICE_DETAILS=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"query { service(id: \\\"$SERVICE_ID\\\") { id name activeDeployment { url } } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Service details: $SERVICE_DETAILS"
+          ACTUAL_URL=$(echo "$SERVICE_DETAILS" | jq -r '.data.service.activeDeployment.url // empty')
+          
+          if [ -n "$ACTUAL_URL" ]; then
+            echo "✅ Actual deployment URL: $ACTUAL_URL"
+            echo "deployment_url=$ACTUAL_URL" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Deployment URL not yet available, check Railway dashboard"
+          fi
 
       - name: Test deployment
         run: |
