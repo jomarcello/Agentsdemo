@@ -151,14 +151,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Check if new practice was added
         id: check
         run: |
           echo "🔍 Checking if a new practice was added..."
           
-          # Get the diff of practice-config.ts
-          git fetch origin main
+          # Get the diff of practice-config.ts between current and previous commit
           DIFF_OUTPUT=$(git diff HEAD~1 HEAD -- src/lib/practice-config.ts)
           
           echo "Git diff output:"
