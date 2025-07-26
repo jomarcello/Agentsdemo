@@ -120,12 +120,23 @@ jobs:
           echo "📋 Service ID: $SERVICE_ID"
           echo "🔗 Project URL: https://railway.app/project/$PROJECT_ID"
           echo ""
-          echo "⚡ Next step: Generate domain after deployment completes"
-          echo "Run this command to generate domain:"
-          echo "gh workflow run railway-domain-generator.yml -f service_id=$SERVICE_ID -f practice_name='${{ inputs.practice_name }}'"
-          echo ""
-          echo "Or trigger manually at:"
-          echo "https://github.com/jomarcello/Agentsdemo/actions/workflows/railway-domain-generator.yml"
+          echo "⚡ Auto-triggering domain generation workflow..."
+          
+          # Trigger domain generation workflow automatically
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Content-Type: application/json" \
+            -d "{\"ref\":\"main\",\"inputs\":{\"service_id\":\"$SERVICE_ID\",\"practice_name\":\"${{ inputs.practice_name }}\"}}" \
+            "https://api.github.com/repos/jomarcello/Agentsdemo/actions/workflows/railway-domain-generator.yml/dispatches"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Domain generation workflow triggered successfully!"
+            echo "🔗 Monitor at: https://github.com/jomarcello/Agentsdemo/actions"
+          else
+            echo "❌ Failed to trigger domain generation workflow"
+            echo "💡 Trigger manually with Service ID: $SERVICE_ID"
+          fi
 
       - name: Test deployment
         run: |
