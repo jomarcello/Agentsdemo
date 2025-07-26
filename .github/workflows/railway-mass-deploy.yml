@@ -28,44 +28,59 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Railway  
-        uses: docker://ghcr.io/railwayapp/cli:latest
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        with:
-          entrypoint: sh
-          args: |
-            -c "
-            echo '🚀 Deploying ${{ inputs.practice_name }} (${{ inputs.practice_id }})'
-            
-            # Install required tools
-            apk add --no-cache jq curl
-            
-            # Initialize Railway project  
-            railway init -n '${{ inputs.practice_id }}-demo'
-            
-            # Set environment variables
-            railway variables --set 'PRACTICE_ID=${{ inputs.practice_id }}'
-            railway variables --set 'NODE_ENV=production'
-            
-            # Deploy
-            railway up --detach
-            
-            # Get deployment URL
-            DEPLOYMENT_URL=$(railway status --json | jq -r '.deployments[0].url // empty')
-            if [ -z \"$DEPLOYMENT_URL\" ]; then
-              DEPLOYMENT_URL=\"https://${{ inputs.practice_id }}-demo-production.up.railway.app\"
-            fi
-            
-            echo \"✅ Deployment complete: $DEPLOYMENT_URL\"
-            echo \"deployment_url=$DEPLOYMENT_URL\" >> $GITHUB_OUTPUT
-            
-            # Test HTTP status
-            sleep 30
-            STATUS=$(curl -s -o /dev/null -w '%{http_code}' \"$DEPLOYMENT_URL\" || echo '000')
-            echo \"🔍 HTTP Status: $STATUS\"
-            echo \"http_status=$STATUS\" >> $GITHUB_OUTPUT
-            "
+      - name: Deploy to Railway via GraphQL API
+        run: |
+          echo '🚀 Deploying ${{ inputs.practice_name }} (${{ inputs.practice_id }})'
+          
+          # Create Railway project via GraphQL API
+          PROJECT_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"mutation { projectCreate(input: { name: \"${{ inputs.practice_id }}-demo\" }) { id name } }"}' \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Project response: $PROJECT_RESPONSE"
+          
+          # Extract project ID
+          PROJECT_ID=$(echo "$PROJECT_RESPONSE" | jq -r '.data.projectCreate.id // empty')
+          
+          if [ -z "$PROJECT_ID" ]; then
+            echo "❌ Failed to create project"
+            echo "$PROJECT_RESPONSE"
+            exit 1
+          fi
+          
+          echo "✅ Created project: $PROJECT_ID"
+          
+          # Create environment
+          ENV_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { environmentCreate(input: { projectId: \\\"$PROJECT_ID\\\", name: \\\"production\\\" }) { id name } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Environment response: $ENV_RESPONSE"
+          
+          # Create service 
+          SERVICE_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { serviceCreate(input: { projectId: \\\"$PROJECT_ID\\\", name: \\\"web\\\" }) { id name } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Service response: $SERVICE_RESPONSE"
+          SERVICE_ID=$(echo "$SERVICE_RESPONSE" | jq -r '.data.serviceCreate.id // empty')
+          
+          # Expected URL format
+          DEPLOYMENT_URL="https://${{ inputs.practice_id }}-demo-production.up.railway.app"
+          echo "✅ Deployment complete: $DEPLOYMENT_URL"
+          echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          
+          # Test HTTP status after delay
+          sleep 30
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$DEPLOYMENT_URL" || echo '000')
+          echo "🔍 HTTP Status: $STATUS"
+          echo "http_status=$STATUS" >> $GITHUB_OUTPUT
 
       - name: Test deployment
         run: |
