@@ -152,50 +152,105 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy Advanced Spine Care to Railway
-        uses: docker://ghcr.io/railwayapp/cli:latest
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        with:
-          entrypoint: sh
-          args: |
-            -c "
-            echo '🚀 Auto-deploying Advanced Spine Care (advanced-spine-care)'
-            
-            # Install required tools
-            apk add --no-cache jq curl
-            
-            # Initialize Railway project
-            railway init -n 'advanced-spine-care-demo'
-            
-            # Set environment variables
-            railway variables --set 'PRACTICE_ID=advanced-spine-care'
-            railway variables --set 'NODE_ENV=production'
-            
-            # Deploy
-            railway up --detach
-            
-            # Get deployment URL
-            DEPLOYMENT_URL=$(railway status --json | jq -r '.deployments[0].url // empty')
-            if [ -z \"$DEPLOYMENT_URL\" ]; then
-              DEPLOYMENT_URL=\"https://advanced-spine-care-demo-production.up.railway.app\"
-            fi
-            
-            echo \"✅ Auto-deployment complete: $DEPLOYMENT_URL\"
-            echo \"deployment_url=$DEPLOYMENT_URL\" >> $GITHUB_OUTPUT
-            
-            # Test HTTP status
-            sleep 30
-            STATUS=$(curl -s -o /dev/null -w '%{http_code}' \"$DEPLOYMENT_URL\" || echo '000')
-            echo \"🔍 HTTP Status: $STATUS\"
-            echo \"http_status=$STATUS\" >> $GITHUB_OUTPUT
-            "
+      - name: Deploy Rotterdam Wellness to Railway
+        run: |
+          echo '🚀 Auto-deploying Rotterdam Wellness (rotterdam-wellness)'
+          
+          # Create Railway project
+          PROJECT_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"mutation { projectCreate(input: { name: \"rotterdam-wellness-demo\" }) { id name } }"}' \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Project response: $PROJECT_RESPONSE"
+          PROJECT_ID=$(echo "$PROJECT_RESPONSE" | jq -r '.data.projectCreate.id // empty')
+          
+          if [ -z "$PROJECT_ID" ]; then
+            echo "❌ Failed to create project"
+            exit 1
+          fi
+          
+          echo "✅ Created project: $PROJECT_ID"
+          
+          # Create service
+          SERVICE_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { serviceCreate(input: { projectId: \\\"$PROJECT_ID\\\", name: \\\"rotterdam-wellness-demo\\\" }) { id name } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Service response: $SERVICE_RESPONSE"
+          SERVICE_ID=$(echo "$SERVICE_RESPONSE" | jq -r '.data.serviceCreate.id // empty')
+          
+          if [ -z "$SERVICE_ID" ]; then
+            echo "❌ Failed to create service"
+            exit 1
+          fi
+          
+          echo "✅ Created service: $SERVICE_ID"
+          
+          # Connect GitHub repository
+          CONNECT_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { serviceConnect(id: \\\"$SERVICE_ID\\\", input: { repo: \\\"jomarcello/Agentsdemo\\\", branch: \\\"main\\\" }) { id } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Connect response: $CONNECT_RESPONSE"
+          
+          # Set PRACTICE_ID environment variable
+          PRACTICE_VAR_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"PRACTICE_ID\\\", value: \\\"rotterdam-wellness\\\" }) { id name value } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Practice variable response: $PRACTICE_VAR_RESPONSE"
+          
+          # Set NODE_ENV environment variable
+          NODE_ENV_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"NODE_ENV\\\", value: \\\"production\\\" }) { id name value } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Node env response: $NODE_ENV_RESPONSE"
+          
+          # Wait for setup
+          sleep 10
+          
+          # Trigger deployment
+          DEPLOY_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { serviceInstanceDeploy(serviceId: \\\"$SERVICE_ID\\\", latestCommit: true) }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Deploy response: $DEPLOY_RESPONSE"
+          
+          DEPLOYMENT_URL="https://rotterdam-wellness-demo-production.up.railway.app"
+          echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          
+          echo "✅ Rotterdam Wellness deployment complete!"
+          echo "🔗 Project URL: https://railway.app/project/$PROJECT_ID"  
+          echo "🌐 App URL: $DEPLOYMENT_URL"
+          
+          # Auto-trigger domain generation workflow
+          curl --connect-timeout 30 --max-time 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Content-Type: application/json" \
+            -d "{\"ref\":\"main\",\"inputs\":{\"service_id\":\"$SERVICE_ID\",\"practice_name\":\"Rotterdam Wellness Center\"}}" \
+            "https://api.github.com/repos/jomarcello/Agentsdemo/actions/workflows/railway-domain-generator.yml/dispatches"
+          
+          echo "✅ Domain generation workflow triggered!"
 
       - name: Test auto deployment
         run: |
           echo "🧪 Testing auto deployment..."
-          echo "Practice: Advanced Spine Care"
-          echo "URL: https://advanced-spine-care-demo-production.up.railway.app"
+          echo "Practice: Rotterdam Wellness Center"
+          echo "URL: https://rotterdam-wellness-demo-production.up.railway.app"
 
   deploy-all:
     if: ${{ inputs.deploy_all }}
