@@ -152,15 +152,67 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy Rotterdam Wellness to Railway
+      - name: Detect changed practice
+        id: detect
         run: |
-          echo '🚀 Auto-deploying Rotterdam Wellness (rotterdam-wellness)'
+          echo "🔍 Detecting which practice was added/changed..."
+          
+          # Get the diff of practice-config.ts
+          git fetch origin main
+          DIFF_OUTPUT=$(git diff HEAD~1 HEAD -- src/lib/practice-config.ts)
+          
+          echo "Git diff output:"
+          echo "$DIFF_OUTPUT"
+          
+          # Extract practice ID from added lines (lines starting with +)
+          NEW_PRACTICE=$(echo "$DIFF_OUTPUT" | grep "^+" | grep -o "'[a-z-]*':" | head -1 | sed "s/'//g" | sed "s/://g")
+          
+          if [ -z "$NEW_PRACTICE" ]; then
+            # Fallback: check if rotterdam-wellness is in the diff
+            if echo "$DIFF_OUTPUT" | grep -q "rotterdam-wellness"; then
+              NEW_PRACTICE="rotterdam-wellness"
+            else
+              NEW_PRACTICE="advanced-spine-care"  # default fallback
+            fi
+          fi
+          
+          echo "🎯 Detected practice: $NEW_PRACTICE"
+          echo "practice_id=$NEW_PRACTICE" >> $GITHUB_OUTPUT
+          
+          # Set practice name based on ID
+          case $NEW_PRACTICE in
+            "rotterdam-wellness")
+              echo "practice_name=Rotterdam Wellness Center" >> $GITHUB_OUTPUT
+              ;;
+            "advanced-spine-care")
+              echo "practice_name=Advanced Spine Care" >> $GITHUB_OUTPUT
+              ;;
+            "smith")
+              echo "practice_name=Smith Chiropractic" >> $GITHUB_OUTPUT
+              ;;
+            "spinealign")
+              echo "practice_name=SpineAlign Center" >> $GITHUB_OUTPUT
+              ;;
+            "smart-cosmetic")
+              echo "practice_name=Smart Cosmetic Clinic" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "practice_name=Unknown Practice" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Deploy detected practice to Railway
+        run: |
+          PRACTICE_ID="${{ steps.detect.outputs.practice_id }}"
+          PRACTICE_NAME="${{ steps.detect.outputs.practice_name }}"
+          
+          echo "🚀 Auto-deploying $PRACTICE_NAME ($PRACTICE_ID)"
           
           # Create Railway project
           PROJECT_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"query":"mutation { projectCreate(input: { name: \"rotterdam-wellness-demo\" }) { id name } }"}' \
+            -d "{\"query\":\"mutation { projectCreate(input: { name: \\\"$PRACTICE_ID-demo\\\" }) { id name } }\"}" \
             https://backboard.railway.app/graphql/v2)
           
           echo "Project response: $PROJECT_RESPONSE"
@@ -177,7 +229,7 @@ jobs:
           SERVICE_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { serviceCreate(input: { projectId: \\\"$PROJECT_ID\\\", name: \\\"rotterdam-wellness-demo\\\" }) { id name } }\"}" \
+            -d "{\"query\":\"mutation { serviceCreate(input: { projectId: \\\"$PROJECT_ID\\\", name: \\\"$PRACTICE_ID-demo\\\" }) { id name } }\"}" \
             https://backboard.railway.app/graphql/v2)
           
           echo "Service response: $SERVICE_RESPONSE"
@@ -203,7 +255,7 @@ jobs:
           PRACTICE_VAR_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"PRACTICE_ID\\\", value: \\\"rotterdam-wellness\\\" }) { id name value } }\"}" \
+            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"PRACTICE_ID\\\", value: \\\"$PRACTICE_ID\\\" }) { id name value } }\"}" \
             https://backboard.railway.app/graphql/v2)
           
           echo "Practice variable response: $PRACTICE_VAR_RESPONSE"
@@ -229,10 +281,10 @@ jobs:
           
           echo "Deploy response: $DEPLOY_RESPONSE"
           
-          DEPLOYMENT_URL="https://rotterdam-wellness-demo-production.up.railway.app"
+          DEPLOYMENT_URL="https://$PRACTICE_ID-demo-production.up.railway.app"
           echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
           
-          echo "✅ Rotterdam Wellness deployment complete!"
+          echo "✅ $PRACTICE_NAME deployment complete!"
           echo "🔗 Project URL: https://railway.app/project/$PROJECT_ID"  
           echo "🌐 App URL: $DEPLOYMENT_URL"
           
@@ -241,7 +293,7 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Content-Type: application/json" \
-            -d "{\"ref\":\"main\",\"inputs\":{\"service_id\":\"$SERVICE_ID\",\"practice_name\":\"Rotterdam Wellness Center\"}}" \
+            -d "{\"ref\":\"main\",\"inputs\":{\"service_id\":\"$SERVICE_ID\",\"practice_name\":\"$PRACTICE_NAME\"}}" \
             "https://api.github.com/repos/jomarcello/Agentsdemo/actions/workflows/railway-domain-generator.yml/dispatches"
           
           echo "✅ Domain generation workflow triggered!"
@@ -249,8 +301,8 @@ jobs:
       - name: Test auto deployment
         run: |
           echo "🧪 Testing auto deployment..."
-          echo "Practice: Rotterdam Wellness Center"
-          echo "URL: https://rotterdam-wellness-demo-production.up.railway.app"
+          echo "Practice: ${{ steps.detect.outputs.practice_name }}"
+          echo "URL: https://${{ steps.detect.outputs.practice_id }}-demo-production.up.railway.app"
 
   deploy-all:
     if: ${{ inputs.deploy_all }}
