@@ -1,6 +1,6 @@
 // Practice Configuration System
 // Centralized configuration for all practice-specific content
-// Updated: Trigger Rotterdam Wellness deployment with fixed deploy-auto job
+// Updated: Test Amsterdam Wellness selective deployment with fixed git fetch
 
 export interface PracticeConfig {
   id: string;
