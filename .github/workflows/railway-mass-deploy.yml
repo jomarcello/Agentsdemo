@@ -208,6 +208,9 @@ jobs:
             "smart-cosmetic")
               echo "practice_name=Smart Cosmetic Clinic" >> $GITHUB_OUTPUT
               ;;
+            "amsterdam-wellness")
+              echo "practice_name=Amsterdam Wellness Clinic" >> $GITHUB_OUTPUT
+              ;;
             *)
               echo "practice_name=Unknown Practice" >> $GITHUB_OUTPUT
               ;;
