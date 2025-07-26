@@ -1,0 +1,89 @@
+name: Railway CLI Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      practice_id:
+        description: 'Practice ID (e.g., advanced-spine-care)'
+        required: true
+        type: string
+      practice_name:
+        description: 'Practice Name (e.g., Advanced Spine Care)'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Deploy to Railway using CLI
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "🚀 Deploying ${{ inputs.practice_name }} (${{ inputs.practice_id }}) using Railway CLI"
+          
+          # Login with token
+          railway login --token $RAILWAY_TOKEN
+          
+          # Initialize new project
+          PROJECT_NAME="${{ inputs.practice_id }}-demo"
+          echo "📝 Creating Railway project: $PROJECT_NAME"
+          railway init --name $PROJECT_NAME
+          
+          # Set environment variables
+          echo "⚙️ Setting environment variables..."
+          railway variables --set "PRACTICE_ID=${{ inputs.practice_id }}" --set "NODE_ENV=production"
+          
+          # Deploy the service
+          echo "🚀 Deploying service..."
+          railway up --detach
+          
+          # Wait for deployment
+          echo "⏳ Waiting for deployment to complete..."
+          sleep 90
+          
+          # Generate domain
+          echo "🌐 Generating public domain..."
+          railway domain || echo "⚠️ Domain generation failed - may need manual setup"
+          
+          # Get service info
+          echo "📋 Getting service information..."
+          railway status
+          
+          # Try to get the URL
+          SERVICE_URL=$(railway status --json | jq -r '.deployments[0].url // empty' 2>/dev/null || echo "")
+          
+          if [ -n "$SERVICE_URL" ] && [ "$SERVICE_URL" != "null" ]; then
+            echo "✅ Service deployed successfully!"
+            echo "🌐 URL: $SERVICE_URL"
+            
+            # Test the URL
+            echo "🧪 Testing URL accessibility..."
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$SERVICE_URL" || echo '000')
+            echo "📊 HTTP Status: $STATUS"
+            
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ URL is live and working!"
+            else
+              echo "⚠️ URL may still be starting up"
+            fi
+          else
+            echo "⚠️ Service deployed but no URL available yet"
+            echo "💡 Check Railway dashboard for domain status"
+            echo "🔗 Dashboard: https://railway.app/dashboard"
+          fi
+          
+          echo ""
+          echo "📋 Deployment Summary:"
+          echo "Practice: ${{ inputs.practice_name }}"
+          echo "Project: $PROJECT_NAME"
+          echo "Environment: production"
+          echo "Expected URL: https://${{ inputs.practice_id }}-demo-production.up.railway.app"
