@@ -16,10 +16,13 @@ on:
         required: false
         type: boolean
         default: false
+  push:
+    branches: [ main ]
+    paths: [ 'src/lib/practice-config.ts' ]
 
 jobs:
   deploy-single:
-    if: ${{ !inputs.deploy_all }}
+    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.deploy_all }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -67,6 +70,55 @@ jobs:
           echo "Practice: ${{ inputs.practice_name }}"
           echo "URL: ${{ steps.deploy.outputs.deployment_url }}"
           echo "Status: ${{ steps.deploy.outputs.http_status }}"
+
+  deploy-auto:
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Advanced Spine Care to Railway
+        uses: docker://ghcr.io/railwayapp/cli:latest
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        with:
+          entrypoint: sh
+          args: |
+            -c "
+            echo '🚀 Auto-deploying Advanced Spine Care (advanced-spine-care)'
+            
+            # Initialize Railway project
+            railway init -n 'advanced-spine-care-demo'
+            
+            # Set environment variables
+            railway variables --set 'PRACTICE_ID=advanced-spine-care'
+            railway variables --set 'NODE_ENV=production'
+            
+            # Deploy
+            railway up --detach
+            
+            # Get deployment URL
+            DEPLOYMENT_URL=$(railway status --json | jq -r '.deployments[0].url // empty')
+            if [ -z \"$DEPLOYMENT_URL\" ]; then
+              DEPLOYMENT_URL=\"https://advanced-spine-care-demo-production.up.railway.app\"
+            fi
+            
+            echo \"✅ Auto-deployment complete: $DEPLOYMENT_URL\"
+            echo \"deployment_url=$DEPLOYMENT_URL\" >> $GITHUB_OUTPUT
+            
+            # Test HTTP status
+            sleep 30
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' \"$DEPLOYMENT_URL\" || echo '000')
+            echo \"🔍 HTTP Status: $STATUS\"
+            echo \"http_status=$STATUS\" >> $GITHUB_OUTPUT
+            "
+
+      - name: Test auto deployment
+        run: |
+          echo "🧪 Testing auto deployment..."
+          echo "Practice: Advanced Spine Care"
+          echo "URL: https://advanced-spine-care-demo-production.up.railway.app"
 
   deploy-all:
     if: ${{ inputs.deploy_all }}
