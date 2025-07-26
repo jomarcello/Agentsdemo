@@ -215,6 +215,9 @@ jobs:
             "berlin-spine")
               echo "practice_name=Berlin Spine Clinic" >> $GITHUB_OUTPUT
               ;;
+            "london-physio")
+              echo "practice_name=London Physiotherapy Clinic" >> $GITHUB_OUTPUT
+              ;;
             *)
               echo "practice_name=Unknown Practice" >> $GITHUB_OUTPUT
               ;;
