@@ -28,9 +28,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Railway via GraphQL API
+      - name: Create Railway Project
         run: |
-          echo '🚀 Deploying ${{ inputs.practice_name }} (${{ inputs.practice_id }})'
+          echo '🚀 Creating Railway project for ${{ inputs.practice_name }} (${{ inputs.practice_id }})'
           
           # Create Railway project via GraphQL API
           PROJECT_RESPONSE=$(curl -s -X POST \
@@ -50,95 +50,25 @@ jobs:
             exit 1
           fi
           
-          echo "✅ Created project: $PROJECT_ID"
+          echo "✅ Created Railway project: $PROJECT_ID"
+          echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
           
-          # Create environment
-          ENV_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { environmentCreate(input: { projectId: \\\"$PROJECT_ID\\\", name: \\\"production\\\" }) { id name } }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Environment response: $ENV_RESPONSE"
-          
-          # Create service 
-          SERVICE_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { serviceCreate(input: { projectId: \\\"$PROJECT_ID\\\", name: \\\"web\\\" }) { id name } }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Service response: $SERVICE_RESPONSE"
-          SERVICE_ID=$(echo "$SERVICE_RESPONSE" | jq -r '.data.serviceCreate.id // empty')
-          
-          if [ -z "$SERVICE_ID" ]; then
-            echo "❌ Failed to create service"
-            echo "$SERVICE_RESPONSE"
-            exit 1
-          fi
-          
-          echo "✅ Created service: $SERVICE_ID"
-          
-          # Connect GitHub repository to service
-          CONNECT_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { serviceConnect(input: { serviceId: \\\"$SERVICE_ID\\\", repo: \\\"jomarcello/Agentsdemo\\\", branch: \\\"main\\\" }) { id } }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Connect response: $CONNECT_RESPONSE"
-          
-          # Set environment variables
-          ENV_VAR_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { variableCollectionUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", environmentId: null, replace: false }) { id } }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Environment variables response: $ENV_VAR_RESPONSE"
-          
-          # Set PRACTICE_ID variable
-          PRACTICE_VAR_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", environmentId: null, name: \\\"PRACTICE_ID\\\", value: \\\"${{ inputs.practice_id }}\\\" }) { id name value } }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Practice variable response: $PRACTICE_VAR_RESPONSE"
-          
-          # Set NODE_ENV variable
-          NODE_ENV_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", environmentId: null, name: \\\"NODE_ENV\\\", value: \\\"production\\\" }) { id name value } }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Node env response: $NODE_ENV_RESPONSE"
-          
-          # Trigger deployment
-          DEPLOY_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { deploymentCreate(input: { serviceId: \\\"$SERVICE_ID\\\", environmentId: null }) { id url status } }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Deploy response: $DEPLOY_RESPONSE"
-          
-          # Extract deployment URL 
-          DEPLOYMENT_URL=$(echo "$DEPLOY_RESPONSE" | jq -r '.data.deploymentCreate.url // empty')
-          if [ -z "$DEPLOYMENT_URL" ]; then
-            DEPLOYMENT_URL="https://${{ inputs.practice_id }}-demo-production.up.railway.app"
-          fi
-          
-          echo "✅ Deployment complete: $DEPLOYMENT_URL"
+          # Expected URL format after manual setup
+          DEPLOYMENT_URL="https://${{ inputs.practice_id }}-demo-production.up.railway.app"
           echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
           
-          # Test HTTP status after delay for deployment to complete
-          echo "⏳ Waiting 60 seconds for deployment to complete..."
-          sleep 60
-          STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$DEPLOYMENT_URL" || echo '000')
-          echo "🔍 HTTP Status: $STATUS"
-          echo "http_status=$STATUS" >> $GITHUB_OUTPUT
+          echo ""
+          echo "🔧 MANUAL SETUP REQUIRED:"
+          echo "1. Go to: https://railway.app/project/$PROJECT_ID"
+          echo "2. Click: + New Service"
+          echo "3. Select: GitHub Repo"
+          echo "4. Choose: jomarcello/Agentsdemo"
+          echo "5. Add environment variables:"
+          echo "   - PRACTICE_ID=${{ inputs.practice_id }}"
+          echo "   - NODE_ENV=production"
+          echo "6. Deploy"
+          echo ""
+          echo "Expected URL: $DEPLOYMENT_URL"
 
       - name: Test deployment
         run: |
