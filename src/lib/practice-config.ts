@@ -1,6 +1,6 @@
 // Practice Configuration System
 // Centralized configuration for all practice-specific content
-// Updated: Railway auto-deployment trigger
+// Updated: Railway auto-deployment trigger with RAILWAY_API_TOKEN fix
 
 export interface PracticeConfig {
   id: string;
