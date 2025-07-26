@@ -23,7 +23,8 @@
     "health:check": "pm2 status && echo '\\n=== Tunnel URLs ===' && pm2 logs spinealign-tunnel --lines 5 | grep -E 'your url is|https://' || echo 'SpineAlign tunnel starting...' && pm2 logs smith-tunnel --lines 5 | grep -E 'your url is|https://' || echo 'Smith tunnel starting...'",
     "deploy:single": "node scripts/trigger-mass-deployment.js single",
     "deploy:all": "node scripts/trigger-mass-deployment.js all",
-    "deploy:mass": "bash scripts/trigger-deployment.sh all"
+    "deploy:mass": "bash scripts/trigger-deployment.sh all",
+    "generate:domain": "node scripts/generate-railway-domain.js"
   },
   "keywords": [
     "healthcare",
