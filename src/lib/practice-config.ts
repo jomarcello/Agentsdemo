@@ -1,6 +1,6 @@
 // Practice Configuration System
 // Centralized configuration for all practice-specific content
-// Updated: Railway auto-deployment trigger with RAILWAY_API_TOKEN fix
+// Updated: Trigger Rotterdam Wellness deployment with fixed deploy-auto job
 
 export interface PracticeConfig {
   id: string;
