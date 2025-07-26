@@ -1,6 +1,6 @@
-// Practice Configuration System
+// Practice Configuration System  
 // Centralized configuration for all practice-specific content
-// Updated: Test Amsterdam Wellness selective deployment with fixed git fetch
+// Updated: Trigger Berlin Spine deployment with Railway compatibility fix
 
 export interface PracticeConfig {
   id: string;
