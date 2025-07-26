@@ -24,7 +24,10 @@
     "deploy:single": "node scripts/trigger-mass-deployment.js single",
     "deploy:all": "node scripts/trigger-mass-deployment.js all",
     "deploy:mass": "bash scripts/trigger-deployment.sh all",
-    "generate:domain": "node scripts/generate-railway-domain.js"
+    "generate:domain": "node scripts/generate-railway-domain.js",
+    "railway:setup": "node scripts/manual-railway-setup.js",
+    "railway:instructions": "node scripts/manual-railway-setup.js all",
+    "railway:deploy": "./scripts/railway-cli-deploy.sh"
   },
   "keywords": [
     "healthcare",
