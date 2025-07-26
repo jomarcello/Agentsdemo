@@ -119,15 +119,13 @@ jobs:
           echo "📋 Project ID: $PROJECT_ID"
           echo "📋 Service ID: $SERVICE_ID"
           echo "🔗 Project URL: https://railway.app/project/$PROJECT_ID"
-          
-          # Wait a moment for deployment to start
-          echo "⏳ Waiting 2 minutes for deployment to start..."
-          sleep 120
-          
-          # Trigger domain generation script
-          echo "🌐 Running domain generation script..."
-          export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-          node scripts/generate-railway-domain.js "$SERVICE_ID"
+          echo ""
+          echo "⚡ Next step: Generate domain after deployment completes"
+          echo "Run this command to generate domain:"
+          echo "gh workflow run railway-domain-generator.yml -f service_id=$SERVICE_ID -f practice_name='${{ inputs.practice_name }}'"
+          echo ""
+          echo "Or trigger manually at:"
+          echo "https://github.com/jomarcello/Agentsdemo/actions/workflows/railway-domain-generator.yml"
 
       - name: Test deployment
         run: |
