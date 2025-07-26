@@ -41,8 +41,7 @@ jobs:
             # Install required tools
             apk add --no-cache jq curl
             
-            # Initialize Railway project
-            railway login --token $RAILWAY_TOKEN
+            # Initialize Railway project  
             railway init -n '${{ inputs.practice_id }}-demo'
             
             # Set environment variables
@@ -96,7 +95,6 @@ jobs:
             apk add --no-cache jq curl
             
             # Initialize Railway project
-            railway login --token $RAILWAY_TOKEN
             railway init -n 'advanced-spine-care-demo'
             
             # Set environment variables
@@ -159,7 +157,6 @@ jobs:
             apk add --no-cache jq curl
             
             # Initialize Railway project
-            railway login --token $RAILWAY_TOKEN
             railway init -n '${{ matrix.practice.id }}-demo'
             
             # Set environment variables
