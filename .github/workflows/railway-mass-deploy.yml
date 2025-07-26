@@ -28,11 +28,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create Railway Project
+      - name: Deploy Fully Automated Railway Project
         run: |
-          echo '🚀 Creating Railway project for ${{ inputs.practice_name }} (${{ inputs.practice_id }})'
+          echo '🚀 Fully automated deployment for ${{ inputs.practice_name }} (${{ inputs.practice_id }})'
           
-          # Create Railway project via GraphQL API
+          # Create Railway project
           PROJECT_RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
@@ -40,35 +40,79 @@ jobs:
             https://backboard.railway.app/graphql/v2)
           
           echo "Project response: $PROJECT_RESPONSE"
-          
-          # Extract project ID
           PROJECT_ID=$(echo "$PROJECT_RESPONSE" | jq -r '.data.projectCreate.id // empty')
           
           if [ -z "$PROJECT_ID" ]; then
             echo "❌ Failed to create project"
-            echo "$PROJECT_RESPONSE"
             exit 1
           fi
           
-          echo "✅ Created Railway project: $PROJECT_ID"
-          echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
+          echo "✅ Created project: $PROJECT_ID"
           
-          # Expected URL format after manual setup
+          # Create service
+          SERVICE_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { serviceCreate(input: { projectId: \\\"$PROJECT_ID\\\", name: \\\"web\\\" }) { id name } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Service response: $SERVICE_RESPONSE"
+          SERVICE_ID=$(echo "$SERVICE_RESPONSE" | jq -r '.data.serviceCreate.id // empty')
+          
+          if [ -z "$SERVICE_ID" ]; then
+            echo "❌ Failed to create service"
+            exit 1
+          fi
+          
+          echo "✅ Created service: $SERVICE_ID"
+          
+          # Connect GitHub repository
+          CONNECT_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { serviceConnect(id: \\\"$SERVICE_ID\\\", input: { repo: \\\"jomarcello/Agentsdemo\\\", branch: \\\"main\\\" }) { id } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Connect response: $CONNECT_RESPONSE"
+          
+          # Set PRACTICE_ID environment variable
+          PRACTICE_VAR_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"PRACTICE_ID\\\", value: \\\"${{ inputs.practice_id }}\\\" }) { id name value } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Practice variable response: $PRACTICE_VAR_RESPONSE"
+          
+          # Set NODE_ENV environment variable
+          NODE_ENV_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"NODE_ENV\\\", value: \\\"production\\\" }) { id name value } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Node env response: $NODE_ENV_RESPONSE"
+          
+          # Wait a moment for setup to complete
+          sleep 10
+          
+          # Trigger deployment
+          DEPLOY_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { serviceInstanceDeploy(serviceId: \\\"$SERVICE_ID\\\", latestCommit: true) }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Deploy response: $DEPLOY_RESPONSE"
+          
+          # Expected URL format  
           DEPLOYMENT_URL="https://${{ inputs.practice_id }}-demo-production.up.railway.app"
           echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
           
-          echo ""
-          echo "🔧 MANUAL SETUP REQUIRED:"
-          echo "1. Go to: https://railway.app/project/$PROJECT_ID"
-          echo "2. Click: + New Service"
-          echo "3. Select: GitHub Repo"
-          echo "4. Choose: jomarcello/Agentsdemo"
-          echo "5. Add environment variables:"
-          echo "   - PRACTICE_ID=${{ inputs.practice_id }}"
-          echo "   - NODE_ENV=production"
-          echo "6. Deploy"
-          echo ""
-          echo "Expected URL: $DEPLOYMENT_URL"
+          echo "✅ Fully automated deployment initiated!"
+          echo "🔗 Project URL: https://railway.app/project/$PROJECT_ID"
+          echo "🌐 Expected App URL: $DEPLOYMENT_URL"
+          echo "⏳ Deployment will be ready in ~2-3 minutes"
 
       - name: Test deployment
         run: |
