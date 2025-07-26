@@ -93,6 +93,25 @@ jobs:
           
           echo "Node env response: $NODE_ENV_RESPONSE"
           
+          # Set PORT environment variable (sometimes needed for Railway)
+          PORT_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"PORT\\\", value: \\\"3000\\\" }) { id name value } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Port response: $PORT_RESPONSE"
+          
+          # Also try to create domain immediately after service setup
+          echo "🌐 Attempting early domain creation..."
+          EARLY_DOMAIN_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { serviceDomainCreate(input: { serviceId: \\\"$SERVICE_ID\\\" }) { id domain } }\"}" \
+            https://backboard.railway.app/graphql/v2)
+          
+          echo "Early domain response: $EARLY_DOMAIN_RESPONSE"
+          
           # Wait a moment for setup to complete
           sleep 10
           
@@ -114,32 +133,57 @@ jobs:
           echo "🌐 App URL: $DEPLOYMENT_URL"
           echo "⏳ Deployment will be ready in ~2-3 minutes"
           
-          # Wait for deployment to complete
-          echo "⏳ Waiting 90 seconds for deployment to complete..."
-          sleep 90
+          # Wait for deployment to complete - keep checking until SUCCESS
+          echo "⏳ Waiting for deployment to complete..."
+          DEPLOYMENT_STATUS="unknown"
+          CHECK_COUNT=0
           
-          # Check deployment status and get service details
-          SERVICE_STATUS=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"query { service(id: \\\"$SERVICE_ID\\\") { id name activeDeployment { id status url } } }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Service status: $SERVICE_STATUS"
-          
-          DEPLOYMENT_STATUS=$(echo "$SERVICE_STATUS" | jq -r '.data.service.activeDeployment.status // "unknown"')
-          EXISTING_URL=$(echo "$SERVICE_STATUS" | jq -r '.data.service.activeDeployment.url // empty')
-          
-          echo "Deployment status: $DEPLOYMENT_STATUS"
+          while [ "$DEPLOYMENT_STATUS" != "SUCCESS" ] && [ "$DEPLOYMENT_STATUS" != "FAILED" ]; do
+            sleep 30
+            CHECK_COUNT=$((CHECK_COUNT + 1))
+            ELAPSED_TIME=$((CHECK_COUNT * 30))
+            echo "⏳ Check $CHECK_COUNT (${ELAPSED_TIME}s elapsed): Checking deployment status..."
+            
+            # Check deployment status and get service details
+            SERVICE_STATUS=$(curl -s -X POST \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\":\"query { service(id: \\\"$SERVICE_ID\\\") { id name activeDeployment { id status url } } }\"}" \
+              https://backboard.railway.app/graphql/v2)
+            
+            echo "Service status response: $SERVICE_STATUS"
+            
+            DEPLOYMENT_STATUS=$(echo "$SERVICE_STATUS" | jq -r '.data.service.activeDeployment.status // "unknown"')
+            EXISTING_URL=$(echo "$SERVICE_STATUS" | jq -r '.data.service.activeDeployment.url // empty')
+            
+            echo "Deployment status: $DEPLOYMENT_STATUS"
+            
+            if [ "$DEPLOYMENT_STATUS" = "SUCCESS" ]; then
+              echo "✅ Deployment completed successfully after ${ELAPSED_TIME} seconds!"
+              break
+            elif [ "$DEPLOYMENT_STATUS" = "FAILED" ]; then
+              echo "❌ Deployment failed after ${ELAPSED_TIME} seconds!"
+              break
+            else
+              echo "⏳ Deployment status: $DEPLOYMENT_STATUS, waiting 30 more seconds..."
+            fi
+            
+            # Safety check - if over 20 minutes, something is wrong
+            if [ "$CHECK_COUNT" -gt 40 ]; then
+              echo "⚠️ Deployment taking longer than 20 minutes. Current status: $DEPLOYMENT_STATUS"
+              echo "🔗 Check Railway dashboard: https://railway.app/project/$PROJECT_ID"
+            fi
+          done
           
           if [ "$DEPLOYMENT_STATUS" = "SUCCESS" ]; then
             echo "✅ Deployment successful!"
             
-            if [ -n "$EXISTING_URL" ] && [ "$EXISTING_URL" != "null" ]; then
+            if [ -n "$EXISTING_URL" ] && [ "$EXISTING_URL" != "null" ] && [ "$EXISTING_URL" != "empty" ]; then
               echo "✅ Railway URL already exists: $EXISTING_URL"
               DEPLOYMENT_URL="$EXISTING_URL"
             else
-              echo "🌐 Generating public Railway domain..."
+              echo "🌐 No existing URL found, generating public Railway domain..."
+              echo "Service ID for domain generation: $SERVICE_ID"
               
               # Create a public domain for the service
               DOMAIN_RESPONSE=$(curl -s -X POST \
@@ -148,16 +192,39 @@ jobs:
                 -d "{\"query\":\"mutation { serviceDomainCreate(input: { serviceId: \\\"$SERVICE_ID\\\" }) { id domain } }\"}" \
                 https://backboard.railway.app/graphql/v2)
               
-              echo "Domain response: $DOMAIN_RESPONSE"
+              echo "Domain generation response: $DOMAIN_RESPONSE"
+              
+              # Check for errors in the response
+              DOMAIN_ERROR=$(echo "$DOMAIN_RESPONSE" | jq -r '.errors[0].message // empty')
+              if [ -n "$DOMAIN_ERROR" ] && [ "$DOMAIN_ERROR" != "empty" ]; then
+                echo "❌ Domain generation error: $DOMAIN_ERROR"
+              fi
               
               GENERATED_DOMAIN=$(echo "$DOMAIN_RESPONSE" | jq -r '.data.serviceDomainCreate.domain // empty')
               
-              if [ -n "$GENERATED_DOMAIN" ] && [ "$GENERATED_DOMAIN" != "null" ]; then
+              if [ -n "$GENERATED_DOMAIN" ] && [ "$GENERATED_DOMAIN" != "null" ] && [ "$GENERATED_DOMAIN" != "empty" ]; then
                 DEPLOYMENT_URL="https://$GENERATED_DOMAIN"
                 echo "✅ Generated Railway URL: $DEPLOYMENT_URL"
               else
-                echo "⚠️ Could not generate domain, using fallback URL"
-                DEPLOYMENT_URL="https://${{ inputs.practice_id }}-demo-production.up.railway.app"
+                echo "⚠️ Could not generate domain, attempting alternative method..."
+                
+                # Try to get any existing domains for this service
+                DOMAINS_RESPONSE=$(curl -s -X POST \
+                  -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"query\":\"query { service(id: \\\"$SERVICE_ID\\\") { domains { nodes { domain } } } }\"}" \
+                  https://backboard.railway.app/graphql/v2)
+                
+                echo "Existing domains response: $DOMAINS_RESPONSE"
+                EXISTING_DOMAIN=$(echo "$DOMAINS_RESPONSE" | jq -r '.data.service.domains.nodes[0].domain // empty')
+                
+                if [ -n "$EXISTING_DOMAIN" ] && [ "$EXISTING_DOMAIN" != "null" ] && [ "$EXISTING_DOMAIN" != "empty" ]; then
+                  DEPLOYMENT_URL="https://$EXISTING_DOMAIN"
+                  echo "✅ Found existing domain: $DEPLOYMENT_URL"
+                else
+                  echo "⚠️ Using fallback URL pattern"
+                  DEPLOYMENT_URL="https://${{ inputs.practice_id }}-demo-production.up.railway.app"
+                fi
               fi
             fi
             
