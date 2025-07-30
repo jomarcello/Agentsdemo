@@ -26,6 +26,7 @@ on:
 
 jobs:
   deploy-single:
+    # ENABLED: Railway token updated - deployments restored
     if: ${{ github.event_name == 'workflow_dispatch' && !inputs.deploy_all }}
     runs-on: ubuntu-latest
     steps:
@@ -185,8 +186,9 @@ jobs:
           echo "Status: ${{ steps.deploy.outputs.http_status }}"
 
   deploy-auto:
-    # STRICT: Only run on push events for single practice additions
-    if: ${{ github.event_name == 'push' }}
+    # ENABLED: Railway token updated - auto deployments restored with bulk prevention
+    # Only triggers for new practices added to practice-config.ts
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -258,6 +260,8 @@ jobs:
               NEW_PRACTICE="utrecht-wellness-centrum"
             elif echo "$DIFF_OUTPUT" | grep -q "antwerpen-wellness-centrum"; then
               NEW_PRACTICE="antwerpen-wellness-centrum"
+            elif echo "$DIFF_OUTPUT" | grep -q "barcelona-wellness-clinic"; then
+              NEW_PRACTICE="barcelona-wellness-clinic"
             else
               echo "❌ Could not extract practice ID from diff"
               echo "should_deploy=false" >> $GITHUB_OUTPUT
@@ -357,6 +361,9 @@ jobs:
               ;;
             "antwerpen-wellness-centrum")
               echo "practice_name=Antwerpen Wellness Centrum" >> $GITHUB_OUTPUT
+              ;;
+            "barcelona-wellness-clinic")
+              echo "practice_name=Barcelona Wellness Clinic" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "practice_name=Unknown Practice" >> $GITHUB_OUTPUT
