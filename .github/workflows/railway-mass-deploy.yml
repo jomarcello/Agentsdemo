@@ -231,6 +231,8 @@ jobs:
               NEW_PRACTICE="london-physio"
             elif echo "$DIFF_OUTPUT" | grep -q "berlin-spine"; then
               NEW_PRACTICE="berlin-spine"
+            elif echo "$DIFF_OUTPUT" | grep -q "paris-spine-clinic"; then
+              NEW_PRACTICE="paris-spine-clinic"
             else
               echo "❌ Could not extract practice ID from diff"
               echo "should_deploy=false" >> $GITHUB_OUTPUT
@@ -286,6 +288,9 @@ jobs:
               ;;
             "test-wellness-demo")
               echo "practice_name=Demo Wellness Center" >> $GITHUB_OUTPUT
+              ;;
+            "paris-spine-clinic")
+              echo "practice_name=Paris Spine Clinic" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "practice_name=Unknown Practice" >> $GITHUB_OUTPUT
