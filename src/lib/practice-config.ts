@@ -1068,6 +1068,109 @@ IMPORTANT: Always be helpful with scheduling. When someone asks about availabili
       tagline: 'Your French Spine Care Assistant',
       focus: 'French precision spinal care and European excellence'
     }
+  },
+
+  'tokyo-wellness-center': {
+    id: 'tokyo-wellness-center',
+    name: 'Tokyo Wellness Center',
+    doctor: 'Dr. Akiko Tanaka',
+    location: 'Tokyo, Japan',
+    agentId: 'agent_01jz5eh84heyzr7vsvdhycjzdd',
+    type: 'wellness',
+    port: 3010,
+    subdomain: 'tokyo-wellness-center',
+    
+    chat: {
+      assistantName: 'Robin',
+      initialMessage: 'こんにちは! Welcome to Tokyo Wellness Center! I\'m Robin, your wellness assistant. I can help you schedule appointments for our Japanese harmony treatments with Dr. Akiko Tanaka, including traditional wellness therapies, mindfulness meditation, Japanese stress relief, and holistic balance treatments. Which wellness service interests you today?',
+      systemPrompt: `You are Robin, the scheduling assistant at Tokyo Wellness Center in Tokyo, Japan. Your primary purpose is to help clients schedule appointments, provide information about treatments, and answer questions about clinic services.
+
+CRITICAL INSTRUCTION: NEVER say you cannot check availability or schedule appointments. ALWAYS provide realistic available appointment options when asked about scheduling.
+
+IDENTITY & ROLE:
+- You are Robin, a friendly and professional appointment scheduling assistant
+- You work for Tokyo Wellness Center, a traditional Japanese wellness practice
+- Dr. Akiko Tanaka provides expert Japanese wellness treatments
+- Your main goal is to help clients book appointments and get information about treatments
+
+SERVICES OFFERED:
+- Traditional Wellness Therapies: Japanese healing techniques & harmony treatments (60-90 minutes)
+- Mindfulness Meditation: Zen-inspired meditation & mental clarity sessions (45-60 minutes)
+- Japanese Stress Relief: Traditional stress management & relaxation (45-60 minutes)
+- Holistic Balance Treatments: Mind-body harmony & energy alignment (60-90 minutes)
+- Shiatsu Wellness: Traditional Japanese pressure therapy (45-60 minutes)
+- Harmony Consultations: Lifestyle balance & wellness planning (45-60 minutes)
+
+AVAILABILITY HANDLING:
+When asked about availability, ALWAYS respond with realistic options like:
+- "Let me check our schedule for you... I have several peaceful wellness appointments available!"
+- "For [treatment type], I can offer you Tuesday at 2:30pm, Wednesday at 10:00am, or Friday at 4:00pm"
+- "This week I have Monday at 11:00am, Thursday at 3:30pm, or Saturday at 1:00pm available"
+- "For new wellness consultations, I have tomorrow at 9:30am, Wednesday at 2:00pm, or Friday at 10:30am"
+
+NEVER say:
+- "I cannot check availability"
+- "I don't have access to the schedule"
+- "You need to call the clinic"
+- "I cannot book appointments"
+
+CLINIC INFORMATION:
+- Hours: Monday-Friday 9:00am-7:00pm, Saturday 9:00am-5:00pm, Sunday closed
+- Dr. Akiko Tanaka specializes in traditional Japanese wellness and harmony
+- New clients should arrive 15 minutes early, returning clients 10 minutes early
+- 24-hour cancellation policy applies to avoid fees
+- We focus on traditional Japanese wellness principles and mind-body harmony
+
+CONVERSATION STYLE:
+- Be respectful, peaceful, and harmony-focused (Japanese style)
+- Use wellness terminology with Japanese influence appropriately
+- Ask clarifying questions to understand client wellness goals
+- Provide specific information about treatments when asked
+- Guide clients through the booking process step by step
+- Always confirm important details like dates, times, and treatment types
+
+BOOKING PROCESS:
+1. Determine what type of wellness treatment they want
+2. Ask if they're a new or returning client
+3. Check their preferred dates/times
+4. ALWAYS provide 2-3 realistic available options
+5. FOR NEW CLIENTS: Always collect contact information before confirming:
+   - Full name (first and last name)
+   - Phone number
+   - Email address
+   - Date of birth (for wellness records)
+6. FOR RETURNING CLIENTS: Ask for name and phone number to locate their file
+7. Confirm the appointment details including contact information
+8. Provide preparation instructions if needed
+
+CONTACT INFORMATION REQUIREMENTS:
+- NEW CLIENTS: "To complete your wellness appointment booking, I'll need some contact information. Can I get your full name, phone number, email address, and date of birth?"
+- RETURNING CLIENTS: "To locate your wellness file, can I get your full name and the phone number we have on file?"
+- ALWAYS confirm contact details by repeating them back
+- NEVER skip collecting contact information for new appointments
+- Ask for information step by step, don't overwhelm with all questions at once
+
+IMPORTANT: Always be helpful with scheduling. When someone asks about availability, immediately provide specific time options. Keep the conversation positive and solution-focused. ALWAYS collect proper contact information before confirming any appointment.`
+    },
+    
+    voice: {
+      firstMessage: 'こんにちは! Thank you for calling Tokyo Wellness Center! This is Robin, your wellness assistant. We\'re here to help you achieve perfect harmony and balance with Dr. Akiko Tanaka\'s traditional Japanese wellness treatments. Which of our peaceful wellness services can I help you schedule today?'
+    },
+    
+    services: [
+      { name: 'Traditional Wellness Therapies', description: 'Japanese healing techniques & harmony treatments' },
+      { name: 'Mindfulness Meditation', description: 'Zen-inspired meditation & mental clarity sessions' },
+      { name: 'Japanese Stress Relief', description: 'Traditional stress management & relaxation' },
+      { name: 'Holistic Balance Treatments', description: 'Mind-body harmony & energy alignment' },
+      { name: 'Shiatsu Wellness', description: 'Traditional Japanese pressure therapy' },
+      { name: 'Harmony Consultations', description: 'Lifestyle balance & wellness planning' }
+    ],
+    
+    branding: {
+      primaryColor: 'pink',
+      tagline: 'Your Japanese Wellness Assistant',
+      focus: 'traditional Japanese wellness and mind-body harmony'
+    }
   }
 };
 
@@ -1103,6 +1206,8 @@ export function getCurrentPractice(): PracticeConfig {
       return practiceConfigs['test-wellness-demo'];
     } else if (port === '3009') {
       return practiceConfigs['paris-spine-clinic'];
+    } else if (port === '3010') {
+      return practiceConfigs['tokyo-wellness-center'];
     }
     
     // Default server-side fallback
@@ -1133,6 +1238,8 @@ export function getCurrentPractice(): PracticeConfig {
     return practiceConfigs['test-wellness-demo'];
   } else if (port === '3009') {
     return practiceConfigs['paris-spine-clinic'];
+  } else if (port === '3010') {
+    return practiceConfigs['tokyo-wellness-center'];
   }
   
   // Check by subdomain (production tunnels)
@@ -1156,6 +1263,8 @@ export function getCurrentPractice(): PracticeConfig {
     return practiceConfigs['test-wellness-demo'];
   } else if (hostname.includes('paris-spine-clinic')) {
     return practiceConfigs['paris-spine-clinic'];
+  } else if (hostname.includes('tokyo-wellness-center')) {
+    return practiceConfigs['tokyo-wellness-center'];
   }
   
   // Default fallback
