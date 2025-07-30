@@ -864,6 +864,96 @@ IMPORTANT: Always be helpful with scheduling. When someone asks about availabili
     }
   },
 
+  'utrecht-wellness-centrum': {
+    id: 'utrecht-wellness-centrum',
+    name: 'Utrecht Wellness Centrum',
+    doctor: 'Dr. Emma van der Berg',
+    location: 'Utrecht, Nederland',
+    agentId: 'agent_01jz5eh84heyzr7vsvdhycjzdd',
+    type: 'wellness',
+    port: 3014,
+    subdomain: 'utrecht-wellness-centrum',
+    
+    chat: {
+      assistantName: 'Robin',
+      initialMessage: 'Goedemiddag! Welkom bij het Utrecht Wellness Centrum! Ik ben Robin, uw wellness assistent. Ik kan u helpen met het inplannen van afspraken voor onze holistische behandelingen met Dr. Emma van der Berg, waaronder wellness consulten, stressmanagement, voedingscoaching en mindfulness therapie. Voor welke wellness service kan ik u vandaag helpen?',
+      
+      systemPrompt: `Je bent Robin, de vriendelijke wellness assistent van het Utrecht Wellness Centrum.
+
+Je rol is om bezoekers te helpen afspraken in te plannen met Dr. Emma van der Berg voor wellness behandelingen.
+
+BELANGRIJKE AFSPRAAK REGELS:
+- Geef ALTIJD 2-3 concrete tijdsopties wanneer iemand beschikbaarheid vraagt
+- Controleer of ze een nieuwe of terugkerende patiënt zijn
+- Voor NIEUWE patiënten: Verzamel ALTIJD contactgegevens (naam, telefoon, email, geboortedatum)
+- Voor TERUGKERENDE patiënten: Vraag naam en telefoonnummer om hun dossier te vinden
+- Bevestig altijd alle afspraakdetails
+
+BESCHIKBAARHEIDSVOORBEELDEN (varieer deze):
+- "Voor wellness consulten heb ik morgen om 10:00, woensdag om 14:30, of vrijdag om 11:00 beschikbaar"
+- "Voor stressmanagement heb ik dinsdag om 9:30, donderdag om 15:00, of zaterdag om 10:30"
+
+ZEG NOOIT:
+- "Ik kan de beschikbaarheid niet controleren"
+- "Ik heb geen toegang tot de agenda"
+- "U moet de kliniek bellen"
+- "Ik kan geen afspraken maken"
+
+KLINIEK INFORMATIE:
+- Openingstijden: Maandag-vrijdag 8:00-18:00, zaterdag 9:00-15:00, zondag gesloten
+- Dr. Emma van der Berg is gespecialiseerd in holistische wellness en stressmanagement
+- Nieuwe patiënten komen 15 minuten vroeger, terugkerende patiënten 10 minuten
+- 24-uurs annuleringsbeleid geldt om kosten te voorkomen
+- Wij richten ons op evidence-based wellness en holistische gezondheid
+
+GESPREKSSTIJL:
+- Wees professioneel, bemoedigend en wellness-gericht
+- Gebruik gepaste wellness terminologie
+- Stel verduidelijkende vragen om behoeften te begrijpen
+- Geef specifieke informatie over behandelingen
+- Begeleid patiënten stap voor stap door het boekingsproces
+- Bevestig altijd belangrijke details zoals data, tijden en behandeltypes
+
+BOEKINGSPROCES:
+1. Bepaal welk type wellness behandeling ze nodig hebben
+2. Vraag of ze een nieuwe of terugkerende patiënt zijn
+3. Controleer hun voorkeursdata/tijden
+4. Geef ALTIJD 2-3 realistische beschikbare opties
+5. VOOR NIEUWE PATIËNTEN: Verzamel contactgegevens voor bevestiging
+6. VOOR TERUGKERENDE PATIËNTEN: Vraag naam en telefoon om dossier te lokaliseren
+7. Bevestig alle afspraakdetails inclusief contactgegevens
+8. Geef voorbereidingsinstructies indien nodig
+
+CONTACTGEGEVENS VEREISTEN:
+- NIEUWE PATIËNTEN: "Om uw wellness afspraak te voltooien, heb ik wat contactgegevens nodig. Kan ik uw volledige naam, telefoonnummer, e-mailadres en geboortedatum krijgen?"
+- TERUGKERENDE PATIËNTEN: "Om uw dossier te vinden, kan ik uw volledige naam krijgen en het telefoonnummer dat wij hebben geregistreerd?"
+- Bevestig ALTIJD contactgegevens door ze te herhalen
+- Sla NOOIT het verzamelen van contactgegevens over voor nieuwe afspraken
+- Vraag informatie stap voor stap, niet alles tegelijk
+
+BELANGRIJK: Wees altijd behulpzaam met planning. Wanneer iemand naar beschikbaarheid vraagt, geef dan onmiddellijk specifieke tijdsopties. Houd het gesprek positief en oplossingsgericht. Verzamel ALTIJD de juiste contactgegevens voordat u een afspraak bevestigt.`
+    },
+    
+    voice: {
+      firstMessage: 'Goedemiddag! Bedankt voor het bellen naar het Utrecht Wellness Centrum. Met Robin, uw wellness assistent. Wij zijn er om u te helpen met holistische wellness en stressmanagement onder begeleiding van Dr. Emma van der Berg. Voor welke van onze wellness services kan ik u vandaag helpen?'
+    },
+    
+    services: [
+      { name: 'Wellness Consultatie', description: 'Holistische gezondheidsanalyse & advies' },
+      { name: 'Stressmanagement', description: 'Stress reductie & coping strategieën' },  
+      { name: 'Voedingscoaching', description: 'Gepersonaliseerde voedingsadvies & begeleiding' },
+      { name: 'Mindfulness Therapie', description: 'Mindfulness training & meditatie' },
+      { name: 'Levensstijl Coaching', description: 'Holistische levensstijl verandering' },
+      { name: 'Ontspanningstherapie', description: 'Ontspanningstechnieken & ademwerk' }
+    ],
+    
+    branding: {
+      primaryColor: 'green',
+      tagline: 'Uw Utrecht Wellness Assistent',
+      focus: 'holistische wellness en stressmanagement'
+    }
+  },
+
   'test-wellness-demo': {
     id: 'test-wellness-demo',
     name: 'Demo Wellness Center',
@@ -1523,6 +1613,8 @@ export function getCurrentPractice(): PracticeConfig {
       return practiceConfigs['nijmegen-fysio'];
     } else if (port === '3013') {
       return practiceConfigs['munich-wellness-zentrum'];
+    } else if (port === '3014') {
+      return practiceConfigs['utrecht-wellness-centrum'];
     }
     
     // Default server-side fallback
@@ -1561,6 +1653,8 @@ export function getCurrentPractice(): PracticeConfig {
     return practiceConfigs['nijmegen-fysio'];
   } else if (port === '3013') {
     return practiceConfigs['munich-wellness-zentrum'];
+  } else if (port === '3014') {
+    return practiceConfigs['utrecht-wellness-centrum'];
   }
   
   // Check by subdomain (production tunnels)
@@ -1592,6 +1686,8 @@ export function getCurrentPractice(): PracticeConfig {
     return practiceConfigs['nijmegen-fysio'];
   } else if (hostname.includes('munich-wellness-zentrum')) {
     return practiceConfigs['munich-wellness-zentrum'];
+  } else if (hostname.includes('utrecht-wellness-centrum')) {
+    return practiceConfigs['utrecht-wellness-centrum'];
   }
   
   // Default fallback

@@ -70,14 +70,9 @@ jobs:
           
           echo "✅ Created service: $SERVICE_ID"
           
-          # Connect GitHub repository
-          CONNECT_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { serviceConnect(id: \\\"$SERVICE_ID\\\", input: { repo: \\\"jomarcello/Agentsdemo\\\", branch: \\\"main\\\" }) { id } }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Connect response: $CONNECT_RESPONSE"
+          # REMOVED: serviceConnect - This was causing ALL services to redeploy on every push
+          # Instead of connecting to GitHub, we'll use a one-time deployment
+          echo "⚠️ Skipping GitHub connection to prevent bulk redeployments"
           
           # Set PRACTICE_ID environment variable with retry logic
           echo "Setting PRACTICE_ID environment variable..."
@@ -123,17 +118,21 @@ jobs:
           # Wait a moment for setup to complete
           sleep 15
           
-          # Trigger deployment with retry logic
-          echo "Triggering deployment..."
+          # Get current commit hash for one-time deployment  
+          COMMIT_HASH=$(git rev-parse HEAD)
+          echo "Using commit hash: $COMMIT_HASH"
+          
+          # Trigger one-time deployment from specific commit (no permanent GitHub connection)
+          echo "Triggering one-time deployment..."
           for i in {1..3}; do
             DEPLOY_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
               -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
               -H "Content-Type: application/json" \
-              -d "{\"query\":\"mutation { serviceInstanceDeploy(serviceId: \\\"$SERVICE_ID\\\", latestCommit: true) }\"}" \
+              -d "{\"query\":\"mutation { serviceInstanceDeploy(serviceId: \\\"$SERVICE_ID\\\", commitSha: \\\"$COMMIT_HASH\\\", repo: \\\"jomarcello/Agentsdemo\\\") }\"}" \
               https://backboard.railway.app/graphql/v2)
             
             if echo "$DEPLOY_RESPONSE" | grep -q '"data"'; then
-              echo "✅ Deployment triggered successfully"
+              echo "✅ One-time deployment triggered successfully (no GitHub connection created)"
               break
             else
               echo "❌ Deploy attempt $i failed: $DEPLOY_RESPONSE"
@@ -255,6 +254,8 @@ jobs:
               NEW_PRACTICE="nijmegen-fysio"
             elif echo "$DIFF_OUTPUT" | grep -q "munich-wellness-zentrum"; then
               NEW_PRACTICE="munich-wellness-zentrum"
+            elif echo "$DIFF_OUTPUT" | grep -q "utrecht-wellness-centrum"; then
+              NEW_PRACTICE="utrecht-wellness-centrum"
             else
               echo "❌ Could not extract practice ID from diff"
               echo "should_deploy=false" >> $GITHUB_OUTPUT
@@ -349,6 +350,9 @@ jobs:
             "munich-wellness-zentrum")
               echo "practice_name=München Wellness Zentrum" >> $GITHUB_OUTPUT
               ;;
+            "utrecht-wellness-centrum")
+              echo "practice_name=Utrecht Wellness Centrum" >> $GITHUB_OUTPUT
+              ;;
             *)
               echo "practice_name=Unknown Practice" >> $GITHUB_OUTPUT
               ;;
@@ -396,14 +400,9 @@ jobs:
           
           echo "✅ Created service: $SERVICE_ID"
           
-          # Connect GitHub repository
-          CONNECT_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { serviceConnect(id: \\\"$SERVICE_ID\\\", input: { repo: \\\"jomarcello/Agentsdemo\\\", branch: \\\"main\\\" }) { id } }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Connect response: $CONNECT_RESPONSE"
+          # REMOVED: serviceConnect - This was causing ALL services to redeploy on every push
+          # Instead of connecting to GitHub, we'll use a one-time deployment
+          echo "⚠️ Skipping GitHub connection to prevent bulk redeployments"
           
           # Set PRACTICE_ID environment variable with retry logic
           echo "Setting PRACTICE_ID environment variable..."
@@ -448,17 +447,21 @@ jobs:
           # Wait for setup
           sleep 15
           
-          # Trigger deployment with retry logic
-          echo "Triggering deployment..."
+          # Get current commit hash for one-time deployment  
+          COMMIT_HASH=$(git rev-parse HEAD)
+          echo "Using commit hash: $COMMIT_HASH"
+          
+          # Trigger one-time deployment from specific commit (no permanent GitHub connection)
+          echo "Triggering one-time deployment..."
           for i in {1..3}; do
             DEPLOY_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
               -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
               -H "Content-Type: application/json" \
-              -d "{\"query\":\"mutation { serviceInstanceDeploy(serviceId: \\\"$SERVICE_ID\\\", latestCommit: true) }\"}" \
+              -d "{\"query\":\"mutation { serviceInstanceDeploy(serviceId: \\\"$SERVICE_ID\\\", commitSha: \\\"$COMMIT_HASH\\\", repo: \\\"jomarcello/Agentsdemo\\\") }\"}" \
               https://backboard.railway.app/graphql/v2)
             
             if echo "$DEPLOY_RESPONSE" | grep -q '"data"'; then
-              echo "✅ Deployment triggered successfully"
+              echo "✅ One-time deployment triggered successfully (no GitHub connection created)"
               break
             else
               echo "❌ Deploy attempt $i failed: $DEPLOY_RESPONSE"
