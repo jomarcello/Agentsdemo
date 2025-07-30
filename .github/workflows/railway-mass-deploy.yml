@@ -1,5 +1,9 @@
 name: Railway Mass Deployment
 
+permissions:
+  contents: read
+  actions: write
+
 on:
   workflow_dispatch:
     inputs:
@@ -75,36 +79,69 @@ jobs:
           
           echo "Connect response: $CONNECT_RESPONSE"
           
-          # Set PRACTICE_ID environment variable
-          PRACTICE_VAR_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"PRACTICE_ID\\\", value: \\\"${{ inputs.practice_id }}\\\" }) { id name value } }\"}" \
-            https://backboard.railway.app/graphql/v2)
+          # Set PRACTICE_ID environment variable with retry logic
+          echo "Setting PRACTICE_ID environment variable..."
+          for i in {1..3}; do
+            PRACTICE_VAR_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"PRACTICE_ID\\\", value: \\\"${{ inputs.practice_id }}\\\" }) { id name value } }\"}" \
+              https://backboard.railway.app/graphql/v2)
+            
+            if echo "$PRACTICE_VAR_RESPONSE" | grep -q '"data"'; then
+              echo "✅ PRACTICE_ID set successfully"
+              break
+            else
+              echo "❌ Attempt $i failed: $PRACTICE_VAR_RESPONSE"
+              if [ $i -lt 3 ]; then
+                sleep 5
+              fi
+            fi
+          done
           
-          echo "Practice variable response: $PRACTICE_VAR_RESPONSE"
-          
-          # Set NODE_ENV environment variable
-          NODE_ENV_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"NODE_ENV\\\", value: \\\"production\\\" }) { id name value } }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Node env response: $NODE_ENV_RESPONSE"
+          # Set NODE_ENV environment variable with retry logic
+          echo "Setting NODE_ENV environment variable..."
+          for i in {1..3}; do
+            NODE_ENV_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"NODE_ENV\\\", value: \\\"production\\\" }) { id name value } }\"}" \
+              https://backboard.railway.app/graphql/v2)
+            
+            if echo "$NODE_ENV_RESPONSE" | grep -q '"data"'; then
+              echo "✅ NODE_ENV set successfully"
+              break
+            else
+              echo "❌ Attempt $i failed: $NODE_ENV_RESPONSE"
+              if [ $i -lt 3 ]; then
+                sleep 5
+              fi
+            fi
+          done
           
           
           # Wait a moment for setup to complete
-          sleep 10
+          sleep 15
           
-          # Trigger deployment
-          DEPLOY_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { serviceInstanceDeploy(serviceId: \\\"$SERVICE_ID\\\", latestCommit: true) }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Deploy response: $DEPLOY_RESPONSE"
+          # Trigger deployment with retry logic
+          echo "Triggering deployment..."
+          for i in {1..3}; do
+            DEPLOY_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\":\"mutation { serviceInstanceDeploy(serviceId: \\\"$SERVICE_ID\\\", latestCommit: true) }\"}" \
+              https://backboard.railway.app/graphql/v2)
+            
+            if echo "$DEPLOY_RESPONSE" | grep -q '"data"'; then
+              echo "✅ Deployment triggered successfully"
+              break
+            else
+              echo "❌ Deploy attempt $i failed: $DEPLOY_RESPONSE"
+              if [ $i -lt 3 ]; then
+                sleep 10
+              fi
+            fi
+          done
           
           # Railway generates predictable URLs: {service-name}-{environment}.up.railway.app
           DEPLOYMENT_URL="https://${{ inputs.practice_id }}-demo-production.up.railway.app"
@@ -122,20 +159,23 @@ jobs:
           echo ""
           echo "⚡ Auto-triggering domain generation workflow..."
           
-          # Trigger domain generation workflow automatically (with timeout)
-          curl --connect-timeout 30 --max-time 60 -X POST \
+          # Trigger domain generation workflow automatically (with better error handling)
+          echo "🔗 Triggering domain generation workflow..."
+          WORKFLOW_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Content-Type: application/json" \
             -d "{\"ref\":\"main\",\"inputs\":{\"service_id\":\"$SERVICE_ID\",\"practice_name\":\"${{ inputs.practice_name }}\"}}" \
-            "https://api.github.com/repos/jomarcello/Agentsdemo/actions/workflows/railway-domain-generator.yml/dispatches"
+            "https://api.github.com/repos/jomarcello/Agentsdemo/actions/workflows/railway-domain-generator.yml/dispatches")
           
-          if [ $? -eq 0 ]; then
+          WORKFLOW_STATUS=$?
+          
+          if [ $WORKFLOW_STATUS -eq 0 ]; then
             echo "✅ Domain generation workflow triggered successfully!"
             echo "🔗 Monitor at: https://github.com/jomarcello/Agentsdemo/actions"
           else
-            echo "❌ Failed to trigger domain generation workflow"
-            echo "💡 Trigger manually with Service ID: $SERVICE_ID"
+            echo "⚠️ Domain workflow trigger returned status: $WORKFLOW_STATUS"
+            echo "💡 You can manually trigger domain generation with Service ID: $SERVICE_ID"
           fi
 
       - name: Test deployment
@@ -166,7 +206,8 @@ jobs:
           echo "$DIFF_OUTPUT"
           
           # Check if this is actually adding a new practice (not just comment changes)
-          NEW_PRACTICE_ADDED=$(echo "$DIFF_OUTPUT" | grep "^+" | grep -E "'[a-z-]+(-[a-z]+)*':\s*{" | head -1)
+          # Look for new practice entries with more flexible regex
+          NEW_PRACTICE_ADDED=$(echo "$DIFF_OUTPUT" | grep "^+" | grep -E "'[a-z0-9-]+(-[a-z0-9]+)*':\s*{" | head -1)
           
           if [ -z "$NEW_PRACTICE_ADDED" ]; then
             echo "❌ No new practice detected - skipping deployment"
@@ -177,20 +218,45 @@ jobs:
           echo "✅ New practice detected: $NEW_PRACTICE_ADDED"
           echo "should_deploy=true" >> $GITHUB_OUTPUT
           
-          # Extract practice ID from added lines
-          NEW_PRACTICE=$(echo "$NEW_PRACTICE_ADDED" | grep -o "'[a-z-]*':" | head -1 | sed "s/'//g" | sed "s/://g")
+          # Extract practice ID from added lines with improved regex
+          NEW_PRACTICE=$(echo "$NEW_PRACTICE_ADDED" | grep -o "'[a-z0-9-]*':" | head -1 | sed "s/'//g" | sed "s/://g")
           
           if [ -z "$NEW_PRACTICE" ]; then
-            # Fallback: check if rotterdam-wellness is in the diff
-            if echo "$DIFF_OUTPUT" | grep -q "rotterdam-wellness"; then
+            # Enhanced fallback: check for specific practices in the diff
+            if echo "$DIFF_OUTPUT" | grep -q "test-wellness-demo"; then
+              NEW_PRACTICE="test-wellness-demo"
+            elif echo "$DIFF_OUTPUT" | grep -q "rotterdam-wellness"; then
               NEW_PRACTICE="rotterdam-wellness"
+            elif echo "$DIFF_OUTPUT" | grep -q "london-physio"; then
+              NEW_PRACTICE="london-physio"
+            elif echo "$DIFF_OUTPUT" | grep -q "berlin-spine"; then
+              NEW_PRACTICE="berlin-spine"
             else
-              NEW_PRACTICE="advanced-spine-care"  # default fallback
+              echo "❌ Could not extract practice ID from diff"
+              echo "should_deploy=false" >> $GITHUB_OUTPUT
+              exit 0
             fi
           fi
           
           echo "🎯 Detected practice: $NEW_PRACTICE"
           echo "practice_id=$NEW_PRACTICE" >> $GITHUB_OUTPUT
+          
+          # Check if this practice was already deployed recently
+          # Look for deployment commit messages in the last 10 commits
+          RECENT_DEPLOYMENTS=$(git log --oneline -10 --grep="$NEW_PRACTICE")
+          
+          if [ ! -z "$RECENT_DEPLOYMENTS" ]; then
+            echo "⚠️ Found recent deployment for $NEW_PRACTICE:"
+            echo "$RECENT_DEPLOYMENTS"
+            
+            # Check if the most recent deployment is very recent (within last 3 commits)
+            VERY_RECENT=$(git log --oneline -3 --grep="$NEW_PRACTICE")
+            if [ ! -z "$VERY_RECENT" ]; then
+              echo "❌ Practice $NEW_PRACTICE was deployed very recently, skipping to prevent duplicate deployment"
+              echo "should_deploy=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
           
           # Set practice name based on ID
           case $NEW_PRACTICE in
@@ -217,6 +283,9 @@ jobs:
               ;;
             "london-physio")
               echo "practice_name=London Physiotherapy Clinic" >> $GITHUB_OUTPUT
+              ;;
+            "test-wellness-demo")
+              echo "practice_name=Demo Wellness Center" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "practice_name=Unknown Practice" >> $GITHUB_OUTPUT
@@ -274,35 +343,68 @@ jobs:
           
           echo "Connect response: $CONNECT_RESPONSE"
           
-          # Set PRACTICE_ID environment variable
-          PRACTICE_VAR_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"PRACTICE_ID\\\", value: \\\"$PRACTICE_ID\\\" }) { id name value } }\"}" \
-            https://backboard.railway.app/graphql/v2)
+          # Set PRACTICE_ID environment variable with retry logic
+          echo "Setting PRACTICE_ID environment variable..."
+          for i in {1..3}; do
+            PRACTICE_VAR_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"PRACTICE_ID\\\", value: \\\"$PRACTICE_ID\\\" }) { id name value } }\"}" \
+              https://backboard.railway.app/graphql/v2)
+            
+            if echo "$PRACTICE_VAR_RESPONSE" | grep -q '"data"'; then
+              echo "✅ PRACTICE_ID set successfully"
+              break
+            else
+              echo "❌ Attempt $i failed: $PRACTICE_VAR_RESPONSE"
+              if [ $i -lt 3 ]; then
+                sleep 5
+              fi
+            fi
+          done
           
-          echo "Practice variable response: $PRACTICE_VAR_RESPONSE"
-          
-          # Set NODE_ENV environment variable
-          NODE_ENV_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"NODE_ENV\\\", value: \\\"production\\\" }) { id name value } }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Node env response: $NODE_ENV_RESPONSE"
+          # Set NODE_ENV environment variable with retry logic
+          echo "Setting NODE_ENV environment variable..."
+          for i in {1..3}; do
+            NODE_ENV_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\":\"mutation { variableUpsert(input: { serviceId: \\\"$SERVICE_ID\\\", name: \\\"NODE_ENV\\\", value: \\\"production\\\" }) { id name value } }\"}" \
+              https://backboard.railway.app/graphql/v2)
+            
+            if echo "$NODE_ENV_RESPONSE" | grep -q '"data"'; then
+              echo "✅ NODE_ENV set successfully"
+              break
+            else
+              echo "❌ Attempt $i failed: $NODE_ENV_RESPONSE"
+              if [ $i -lt 3 ]; then
+                sleep 5
+              fi
+            fi
+          done
           
           # Wait for setup
-          sleep 10
+          sleep 15
           
-          # Trigger deployment
-          DEPLOY_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { serviceInstanceDeploy(serviceId: \\\"$SERVICE_ID\\\", latestCommit: true) }\"}" \
-            https://backboard.railway.app/graphql/v2)
-          
-          echo "Deploy response: $DEPLOY_RESPONSE"
+          # Trigger deployment with retry logic
+          echo "Triggering deployment..."
+          for i in {1..3}; do
+            DEPLOY_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\":\"mutation { serviceInstanceDeploy(serviceId: \\\"$SERVICE_ID\\\", latestCommit: true) }\"}" \
+              https://backboard.railway.app/graphql/v2)
+            
+            if echo "$DEPLOY_RESPONSE" | grep -q '"data"'; then
+              echo "✅ Deployment triggered successfully"
+              break
+            else
+              echo "❌ Deploy attempt $i failed: $DEPLOY_RESPONSE"
+              if [ $i -lt 3 ]; then
+                sleep 10
+              fi
+            fi
+          done
           
           DEPLOYMENT_URL="https://$PRACTICE_ID-demo-production.up.railway.app"
           echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
@@ -311,15 +413,24 @@ jobs:
           echo "🔗 Project URL: https://railway.app/project/$PROJECT_ID"  
           echo "🌐 App URL: $DEPLOYMENT_URL"
           
-          # Auto-trigger domain generation workflow
-          curl --connect-timeout 30 --max-time 60 -X POST \
+          # Auto-trigger domain generation workflow with better error handling
+          echo "🔗 Triggering domain generation workflow..."
+          WORKFLOW_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Content-Type: application/json" \
             -d "{\"ref\":\"main\",\"inputs\":{\"service_id\":\"$SERVICE_ID\",\"practice_name\":\"$PRACTICE_NAME\"}}" \
-            "https://api.github.com/repos/jomarcello/Agentsdemo/actions/workflows/railway-domain-generator.yml/dispatches"
+            "https://api.github.com/repos/jomarcello/Agentsdemo/actions/workflows/railway-domain-generator.yml/dispatches")
           
-          echo "✅ Domain generation workflow triggered!"
+          WORKFLOW_STATUS=$?
+          
+          if [ $WORKFLOW_STATUS -eq 0 ]; then
+            echo "✅ Domain generation workflow triggered successfully!"
+            echo "🔗 Monitor at: https://github.com/jomarcello/Agentsdemo/actions"
+          else
+            echo "⚠️ Domain workflow trigger returned status: $WORKFLOW_STATUS"
+            echo "💡 You can manually trigger domain generation with Service ID: $SERVICE_ID"
+          fi
 
       - name: Skip deployment message
         if: ${{ steps.check.outputs.should_deploy == 'false' }}
