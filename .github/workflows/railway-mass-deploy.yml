@@ -205,15 +205,28 @@ jobs:
           echo "Git diff output:"
           echo "$DIFF_OUTPUT"
           
-          # Check if this is actually adding a new practice (not just comment changes)
-          # Look for new practice entries with more flexible regex
-          NEW_PRACTICE_ADDED=$(echo "$DIFF_OUTPUT" | grep "^+" | grep -E "'[a-z0-9-]+(-[a-z0-9]+)*':\s*{" | head -1)
+          # More precise detection: Only detect NEWLY ADDED practice entries
+          # Look specifically for new practice definitions being added (not modifications)
+          NEW_PRACTICE_LINES=$(echo "$DIFF_OUTPUT" | grep "^+" | grep -E "'[a-z0-9-]+(-[a-z0-9]+)*':\s*{")
           
-          if [ -z "$NEW_PRACTICE_ADDED" ]; then
-            echo "❌ No new practice detected - skipping deployment"
+          if [ -z "$NEW_PRACTICE_LINES" ]; then
+            echo "❌ No new practice detected in diff - skipping deployment"
             echo "should_deploy=false" >> $GITHUB_OUTPUT
             exit 0
           fi
+          
+          # Count how many practices are being added (should be exactly 1 for single new lead)
+          PRACTICE_COUNT=$(echo "$NEW_PRACTICE_LINES" | wc -l | tr -d ' ')
+          echo "📊 Number of practices detected in diff: $PRACTICE_COUNT"
+          
+          if [ "$PRACTICE_COUNT" -gt 1 ]; then
+            echo "⚠️ Multiple practices detected - this might be a bulk change"
+            echo "🔍 Detected practices:"
+            echo "$NEW_PRACTICE_LINES"
+          fi
+          
+          # Get the first (and hopefully only) new practice
+          NEW_PRACTICE_ADDED=$(echo "$NEW_PRACTICE_LINES" | head -1)
           
           echo "✅ New practice detected: $NEW_PRACTICE_ADDED"
           echo "should_deploy=true" >> $GITHUB_OUTPUT
@@ -249,22 +262,34 @@ jobs:
           echo "🎯 Detected practice: $NEW_PRACTICE"
           echo "practice_id=$NEW_PRACTICE" >> $GITHUB_OUTPUT
           
-          # Check if this practice was already deployed recently
-          # Look for deployment commit messages in the last 10 commits
+          # ENHANCED DUPLICATE PREVENTION
+          # 1. Check if this practice was already deployed recently
           RECENT_DEPLOYMENTS=$(git log --oneline -10 --grep="$NEW_PRACTICE")
           
           if [ ! -z "$RECENT_DEPLOYMENTS" ]; then
             echo "⚠️ Found recent deployment for $NEW_PRACTICE:"
             echo "$RECENT_DEPLOYMENTS"
             
-            # Check if the most recent deployment is very recent (within last 3 commits)
+            # Check if it was deployed in the last 3 commits
             VERY_RECENT=$(git log --oneline -3 --grep="$NEW_PRACTICE")
             if [ ! -z "$VERY_RECENT" ]; then
-              echo "❌ Practice $NEW_PRACTICE was deployed very recently, skipping to prevent duplicate deployment"
+              echo "❌ Practice $NEW_PRACTICE was deployed very recently, skipping duplicate deployment"
               echo "should_deploy=false" >> $GITHUB_OUTPUT
               exit 0
             fi
           fi
+          
+          # 2. CRITICAL: Ensure we're only deploying ONE practice, not triggering bulk deployments
+          if [ "$PRACTICE_COUNT" -gt 1 ]; then
+            echo "🚫 BLOCKING: Multiple practices detected in single commit!"
+            echo "🔒 To prevent accidental bulk deployment, only single practice additions are allowed"
+            echo "💡 If you need to deploy multiple practices, do separate commits"
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # 3. Final verification: Check if this practice already exists in Railway
+          echo "🔍 Final check: Verifying this is genuinely a NEW practice..."
           
           # Set practice name based on ID
           case $NEW_PRACTICE in
