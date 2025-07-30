@@ -186,6 +186,7 @@ jobs:
           echo "Status: ${{ steps.deploy.outputs.http_status }}"
 
   deploy-auto:
+    # STRICT: Only run on push events for single practice additions
     if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
@@ -281,11 +282,22 @@ jobs:
             fi
           fi
           
-          # 2. CRITICAL: Ensure we're only deploying ONE practice, not triggering bulk deployments
+          # 2. CRITICAL KILL SWITCH: Absolutely prevent bulk deployments
           if [ "$PRACTICE_COUNT" -gt 1 ]; then
-            echo "🚫 BLOCKING: Multiple practices detected in single commit!"
-            echo "🔒 To prevent accidental bulk deployment, only single practice additions are allowed"
-            echo "💡 If you need to deploy multiple practices, do separate commits"
+            echo "🚫 EMERGENCY STOP: Multiple practices detected in single commit!"
+            echo "🔒 BULK DEPLOYMENT PREVENTION ACTIVATED"
+            echo "📊 Detected $PRACTICE_COUNT practices - MAXIMUM ALLOWED: 1"
+            echo "🛑 This commit is BLOCKED from triggering any deployments"
+            echo "💡 Solution: Separate commits for each new practice"
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # 2b. ADDITIONAL PROTECTION: Prevent ANY deployment if file contains too many changes
+          TOTAL_CHANGES=$(echo "$DIFF_OUTPUT" | grep "^+" | wc -l | tr -d ' ')
+          if [ "$TOTAL_CHANGES" -gt 50 ]; then
+            echo "🚫 BULK CHANGE DETECTED: $TOTAL_CHANGES additions in diff"
+            echo "🔒 Large changes are BLOCKED to prevent accidental bulk deployments"
             echo "should_deploy=false" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -497,7 +509,9 @@ jobs:
           echo "URL: https://${{ steps.check.outputs.practice_id }}-demo-production.up.railway.app"
 
   deploy-all:
-    if: ${{ inputs.deploy_all }}
+    # DISABLED: This job was causing bulk deployments of all practices
+    # Only enable this job for manual mass deployments via workflow_dispatch
+    if: ${{ inputs.deploy_all && github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -551,7 +565,8 @@ jobs:
             "
 
   summary:
-    if: ${{ inputs.deploy_all }}
+    # DISABLED: Only run for manual mass deployments
+    if: ${{ inputs.deploy_all && github.event_name == 'workflow_dispatch' }}
     needs: deploy-all
     runs-on: ubuntu-latest
     steps:
