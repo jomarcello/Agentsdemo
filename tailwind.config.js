@@ -6,6 +6,35 @@ module.exports = {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
     './src/lib/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  safelist: [
+    // Healthcare dynamic classes
+    'from-emerald-600', 'to-green-600', 'from-emerald-700', 'to-green-700',
+    'from-pink-600', 'to-purple-600', 'from-pink-700', 'to-purple-700', 
+    'from-blue-600', 'to-indigo-600', 'from-blue-700', 'to-indigo-700',
+    'text-emerald-600', 'text-pink-600', 'text-blue-600', 
+    'text-green-700', 'text-purple-700', 'text-indigo-700',
+    'bg-emerald-600', 'bg-pink-600', 'bg-blue-600',
+    'hover:from-emerald-700', 'hover:to-green-700',
+    'hover:from-pink-700', 'hover:to-purple-700',
+    'hover:from-blue-700', 'hover:to-indigo-700',
+    // Layout classes
+    'bg-gradient-to-r', 'bg-gradient-to-br', 'bg-gradient-to-l',
+    'shadow-lg', 'shadow-xl', 'rounded-lg', 'rounded-xl', 'rounded-2xl',
+    'p-4', 'p-6', 'p-8', 'px-4', 'px-6', 'px-8', 'py-2', 'py-4', 'py-6',
+    'mb-4', 'mb-6', 'mb-8', 'mt-4', 'mt-6', 'mt-8',
+    'text-white', 'text-gray-800', 'text-gray-600', 'text-gray-900',
+    'bg-white', 'bg-gray-50', 'bg-gray-100', 'bg-gray-200',
+    'border', 'border-gray-200', 'border-gray-300',
+    'flex', 'items-center', 'justify-center', 'space-x-2', 'space-x-4',
+    'w-full', 'h-full', 'max-w-4xl', 'max-w-6xl', 'mx-auto',
+    'grid', 'grid-cols-1', 'grid-cols-2', 'grid-cols-3', 'md:grid-cols-2', 'lg:grid-cols-3',
+    'gap-4', 'gap-6', 'gap-8',
+    'font-bold', 'font-semibold', 'font-medium',
+    'text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl',
+    'transition-all', 'duration-200', 'duration-300',
+    'hover:shadow-lg', 'hover:shadow-xl', 'hover:scale-105',
+    'animate-pulse', 'animate-bounce',
+  ],
   theme: {
     extend: {
       colors: {
