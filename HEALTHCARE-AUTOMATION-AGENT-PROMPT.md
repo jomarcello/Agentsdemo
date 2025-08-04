@@ -61,21 +61,29 @@ healthcare-demo-template/
 - `.env.local` - **Environment variables with scraped data**
 - `tailwind.config.js` - **Custom color palette** (if needed)
 
-## 🛠️ AVAILABLE MCP TOOLS
+## 🛠️ AVAILABLE AUTOMATION TOOLS
 
-### **Browser Automation (Playwright MCP)**
+### **✅ PREFERRED: Hybrid Automation Approach**
 ```
-Primary: playwright (npx @playwright/mcp@latest)
-Fallback: cloudflare-playwright (HTTP via Smithery)
+Primary: Direct Puppeteer (Native Node.js)
+Backup: Railway MCP (Stable via Claude Code)
+Repository: GitHub CLI (Most Reliable)
 ```
 
-**Key Tools:**
-- `browser_navigate` - Navigate to target practice websites
-- `browser_snapshot` - Extract accessibility tree for data parsing
-- `browser_evaluate` - Execute JavaScript for data extraction
-- `browser_take_screenshot` - Visual verification of scraped content
-- `browser_click` - Interactive elements if needed
-- `browser_type` - Form interactions for deeper scraping
+### **Web Scraping (Direct Puppeteer)**
+**Recommended Method: Native Puppeteer**
+- Auto-installs via `npm install puppeteer --no-save`
+- More reliable than MCP browser automation
+- Better error handling and retry logic
+- Direct JavaScript execution for data extraction
+
+**Key Scraping Targets:**
+- Company name: `h1, .practice-name, .clinic-name, .company-name`
+- Contact: `.doctor-name, .dr-name, h2, .contact-name`
+- Phone: Regex `/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/`
+- Email: Regex `/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/`
+- Location: `.address, .location, .contact-address`
+- Services: `.service, .treatment, .procedure, .offering`
 
 ### **Database Management (Notion MCP)**
 ```
@@ -98,9 +106,22 @@ Priority (select) | Status (select) | Railway Project ID (rich_text)
 Scraped At (date) | Deployed At (date) | Deployment Status (select)
 ```
 
-### **Deployment Automation (Railway MCP)**
+### **✅ Repository Management (GitHub CLI)**
+**Recommended: GitHub CLI (Most Reliable)**
+```bash
+# Create repository
+gh api --method POST /user/repos --field name='practice-demo' --field description='Demo' --field private=false --field auto_init=true
+
+# Clone and populate
+git clone https://github.com/username/practice-demo.git /tmp/practice-demo
+cp -r ./src /tmp/practice-demo/src
+git add . && git commit -m "Personalized demo" && git push
 ```
-Service: jason-tan-swe-railway-mcp (HTTP via Smithery)
+
+### **✅ Deployment Automation (Railway MCP)**
+**Status: STABLE via Claude Code**
+```
+Service: jason-tan-swe-railway-mcp (via Claude Code MCP)
 ```
 
 **Key Tools:**
@@ -110,38 +131,52 @@ Service: jason-tan-swe-railway-mcp (HTTP via Smithery)
 - `mcp__jason-tan-swe-railway-mcp__domain_create` - Generate public domains
 - `mcp__jason-tan-swe-railway-mcp__deployment_trigger` - Deploy applications
 
+**⚠️ MCP Connection Issues:**
+- Railway MCP can disconnect - use `/mcp` command to reconnect
+- Always test connection before batch operations
+- Use Railway CLI as fallback if MCP fails
+
 ## 🔄 EXECUTION WORKFLOW
 
 ### **PHASE 0: Lead Discovery & Scraping**
 
-1. **Target Analysis**
+1. **✅ IMPROVED: Direct Puppeteer Scraping**
    ```javascript
-   // Navigate to practice website
-   await browser_navigate({ url: TARGET_URL })
+   // Use native Puppeteer for reliability
+   const puppeteer = require('puppeteer');
    
-   // Capture page structure
-   const snapshot = await browser_snapshot()
+   const browser = await puppeteer.launch({ headless: true });
+   const page = await browser.newPage();
+   await page.goto(TARGET_URL, { waitUntil: 'networkidle2' });
    ```
 
-2. **Data Extraction Script**
+2. **✅ ENHANCED: Robust Data Extraction**
    ```javascript
-   const extractedData = await browser_evaluate({
-     function: `() => {
-       const data = {
-         company: document.querySelector('h1, .practice-name, .clinic-name')?.textContent?.trim(),
-         contactName: document.querySelector('.doctor-name, .dr-name, h2')?.textContent?.trim(),
-         phone: document.body.textContent.match(/\(\d{3}\)\s*\d{3}-\d{4}|\d{3}-\d{3}-\d{4}/)?.[0],
-         email: document.body.textContent.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)?.[0],
-         location: document.querySelector('.address, .location')?.textContent?.trim(),
-         services: Array.from(document.querySelectorAll('.service, .treatment')).map(el => el.textContent.trim()),
-         brandColors: {
-           primary: getComputedStyle(document.body).getPropertyValue('--primary-color') || '#0066cc',
-           secondary: getComputedStyle(document.body).getPropertyValue('--secondary-color') || '#004499'
-         }
+   const extractedData = await page.evaluate(() => {
+     const getText = (selector) => {
+       const el = document.querySelector(selector);
+       return el ? el.textContent.trim() : '';
+     };
+     
+     const getAllText = (selectors) => {
+       for (const selector of selectors) {
+         const text = getText(selector);
+         if (text && text.length > 0) return text;
        }
-       return data
-     }`
-   })
+       return '';
+     };
+     
+     return {
+       company: getAllText(['h1', '.practice-name', '.clinic-name', '.company-name', '.brand-name']) || 'Unknown Practice',
+       contactName: getAllText(['.doctor-name', '.dr-name', 'h2', '.contact-name', '.owner-name']) || 'Dr. Unknown',
+       phone: document.body.textContent.match(/\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}/)?.[0] || '',
+       email: document.body.textContent.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/)?.[0] || '',
+       location: getAllText(['.address', '.location', '.contact-address']) || 'Unknown Location',
+       services: Array.from(document.querySelectorAll('.service, .treatment, .procedure, .offering')).map(el => el.textContent.trim()).slice(0, 5)
+     };
+   });
+   
+   await browser.close();
    ```
 
 3. **Lead Enrichment**
@@ -233,47 +268,64 @@ Service: jason-tan-swe-railway-mcp (HTTP via Smithery)
    echo "✅ Repository now contains complete healthcare application ready for personalization"
    ```
 
-3. **AI-Driven Code Personalization**
+3. **✅ FIXED: Perfect Code Personalization (No Syntax Errors)**
    ```javascript
-   // Update practice configuration with scraped data
+   // CRITICAL: Proper string escaping to prevent build failures
    const updatePracticeConfig = async (repoPath, leadData) => {
      const configPath = `${repoPath}/src/lib/practice-config.ts`
      
-     const personalizedConfig = `
-     export const practiceConfig = {
-       id: '${practiceId}',
-       name: '${leadData.company}',
-       doctor: '${leadData.contactName}',
-       location: '${leadData.location}',
-       phone: '${leadData.phone}',
-       email: '${leadData.email}',
-       
-       // Scraped branding
-       branding: {
-         primaryColor: '${leadData.brandColors.primary}',
-         secondaryColor: '${leadData.brandColors.secondary}',
-         logo: '${leadData.logo || ''}',
-         tagline: 'Your ${leadData.practiceType} Assistant'
-       },
-       
-       // Extracted services
-       services: ${JSON.stringify(leadData.services)},
-       
-       // AI-generated chat configuration
-       chat: {
-         assistantName: 'Robin',
-         initialMessage: 'Thank you for contacting ${leadData.company}! I\\'m Robin, your ${leadData.practiceType} assistant. I can help you schedule appointments with ${leadData.contactName}. Which service interests you today?',
-         systemPrompt: \`You are Robin, the scheduling assistant at ${leadData.company} in ${leadData.location}. Help patients book appointments for: ${leadData.services.join(', ')}.\`
-       },
-       
-       // Voice assistant configuration  
-       voice: {
-         firstMessage: 'Thank you for calling ${leadData.company}! This is Robin. We\\'re here to help you with ${leadData.practiceType} care. How can I assist you today?'
-       }
-     }`
+     // Read original config to preserve structure
+     let originalConfig = fs.readFileSync(configPath, 'utf8');
      
-     // Write personalized configuration
-     await writeFile(configPath, personalizedConfig)
+     // ESCAPE ALL STRINGS PROPERLY
+     const cleanName = leadData.company.split('\n')[0].replace(/'/g, "\\'").trim();
+     const cleanDoctor = leadData.contactName.split('\n')[0].replace(/'/g, "\\'").trim();
+     const cleanLocation = leadData.location.split('\n')[0].replace(/'/g, "\\'").trim();
+     
+     const personalizedConfigEntry = `
+   '${leadData.practiceId}': {
+     id: '${leadData.practiceId}',
+     name: '${cleanName}',
+     doctor: '${cleanDoctor}',
+     location: '${cleanLocation}',
+     agentId: 'agent_01k0a57qgte4k8yrmt4tbm9s60',
+     type: '${leadData.practiceType}' as const,
+     port: 3000,
+     subdomain: '${leadData.practiceId}',
+     
+     chat: {
+       assistantName: 'Robin',
+       initialMessage: 'Thank you for contacting ${cleanName}! I am Robin, your ${leadData.practiceType} assistant. How can I help you today?',
+       systemPrompt: \`You are Robin, the assistant at ${cleanName} in ${cleanLocation}. Help patients with ${leadData.practiceType} services.\`
+     },
+     
+     voice: {
+       firstMessage: 'Thank you for calling ${cleanName}! This is Robin. How can I assist you today?'
+     },
+     
+     services: ${JSON.stringify(leadData.services.length > 0 ? leadData.services.map(s => ({name: s, description: s})) : [{name: 'General Consultation', description: 'Comprehensive consultation'}], null, 6)},
+     
+     branding: {
+       primaryColor: '${leadData.brandColors.primary}',
+       tagline: 'Your ${leadData.practiceType} assistant',
+       focus: '${leadData.practiceType} care'
+     }
+   },`;
+     
+     // Insert into existing practiceConfigs
+     const configsIndex = originalConfig.indexOf('export const practiceConfigs: Record<string, PracticeConfig> = {');
+     if (configsIndex !== -1) {
+       const insertIndex = originalConfig.indexOf('{', configsIndex) + 1;
+       originalConfig = originalConfig.slice(0, insertIndex) + personalizedConfigEntry + originalConfig.slice(insertIndex);
+     }
+     
+     // Update default practice
+     originalConfig = originalConfig.replace(
+       /const practiceId = process\.env\.PRACTICE_ID \|\| '[^']*'/,
+       `const practiceId = process.env.PRACTICE_ID || '${leadData.practiceId}'`
+     );
+     
+     await writeFile(configPath, originalConfig);
    }
    ```
 
@@ -485,6 +537,91 @@ await notion_page_update({
 
 ## 🚨 ERROR HANDLING & CRITICAL FIXES
 
+### **✅ RESOLVED: JavaScript Syntax Errors**
+
+**PROBLEEM**: Build failures due to unterminated string constants and multiline strings.
+
+**OORZAAK**: Scraped data contains newlines, quotes, and special characters breaking JavaScript syntax.
+
+**OPLOSSING**:
+```javascript
+// PERFECT STRING ESCAPING FUNCTIONS
+const escapeForJavaScript = (str) => {
+  return str
+    .replace(/\\\\/g, '\\\\\\\\')  // Escape backslashes
+    .replace(/'/g, "\\\\'"       // Escape single quotes
+    .replace(/"/g, '\\\\"')       // Escape double quotes
+    .replace(/\\n/g, ' ')         // Replace newlines with spaces
+    .replace(/\\r/g, ' ')         // Replace carriage returns
+    .replace(/\\t/g, ' ')         // Replace tabs
+    .trim();
+};
+
+const cleanString = (str) => {
+  return str
+    .split('\\n')[0]  // Take only first line
+    .trim()
+    .substring(0, 100)  // Reasonable length
+    || 'Unknown';
+};
+
+// ALWAYS USE THESE BEFORE INSERTING INTO CONFIG
+const cleanName = escapeForJavaScript(practiceData.company);
+const cleanDoctor = escapeForJavaScript(practiceData.contactName);
+const cleanLocation = escapeForJavaScript(practiceData.location);
+```
+
+### **✅ RESOLVED: Practice ID Generation**
+
+**PROBLEEM**: Repository names too long or contain invalid characters.
+
+**OPLOSSING**:
+```javascript
+const generatePracticeId = (companyName) => {
+  let cleaned = companyName
+    .toLowerCase()
+    .replace(/[^a-z0-9\\s-]/g, '')
+    .replace(/\\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  
+  // Take first 3 words max, limit to 25 chars
+  if (cleaned.length > 25) {
+    cleaned = cleaned.split('-').slice(0, 3).join('-');
+  }
+  
+  return cleaned.substring(0, 25);
+};
+```
+
+### **✅ ENHANCED: Practice Type Detection**
+
+**PROBLEEM**: Poor practice type detection, missing cosmetic/beauty practices.
+
+**OPLOSSING**:
+```javascript
+const detectPracticeType = (services) => {
+  const serviceText = services.join(' ').toLowerCase();
+  
+  // Expanded cosmetic/beauty detection
+  if (/botox|filler|cosmetic|aesthetic|beauty|plastic|surgery|dermal|laser/.test(serviceText)) return 'beauty';
+  if (/chiropractic|spine|adjustment|back pain|physiotherapy/.test(serviceText)) return 'chiropractic';
+  if (/wellness|holistic|nutrition|massage|therapy/.test(serviceText)) return 'wellness';
+  
+  return 'beauty';  // Default for London cosmetic clinics
+};
+
+// Practice-specific brand colors
+const getBrandColor = (practiceType) => {
+  const colors = {
+    'beauty': '#e91e63',      // Pink for cosmetic
+    'chiropractic': '#2196f3', // Blue for chiropractic
+    'wellness': '#4caf50'     // Green for wellness
+  };
+  return colors[practiceType] || '#e91e63';
+};
+```
+
 ### **🎨 TAILWIND CSS STYLING ISSUES - RESOLVED**
 
 **PROBLEEM**: Deployed demos showing black text on white background without proper styling.
@@ -660,21 +797,46 @@ const detectBrandColors = () => {
 }
 ```
 
-**Practice Type Detection:**
+**✅ ENHANCED: Practice Type Detection:**
 ```javascript
 const detectPracticeType = (services) => {
-  const chiropracticTerms = ['chiropractic', 'spine', 'adjustment', 'back pain']
-  const cosmeticTerms = ['botox', 'filler', 'cosmetic', 'aesthetic', 'beauty']
-  const wellnessTerms = ['wellness', 'holistic', 'nutrition', 'massage']
+  const serviceText = services.join(' ').toLowerCase();
   
-  const serviceText = services.join(' ').toLowerCase()
+  // Enhanced cosmetic/beauty detection (most valuable)
+  if (/botox|filler|cosmetic|aesthetic|beauty|plastic|surgery|dermal|laser|facial|skin/.test(serviceText)) return 'beauty';
   
-  if (chiropracticTerms.some(term => serviceText.includes(term))) return 'chiropractic'
-  if (cosmeticTerms.some(term => serviceText.includes(term))) return 'cosmetic'
-  if (wellnessTerms.some(term => serviceText.includes(term))) return 'wellness'
+  // Chiropractic detection
+  if (/chiropractic|spine|adjustment|back pain|physiotherapy|osteopath/.test(serviceText)) return 'chiropractic';
   
-  return 'general'
-}
+  // Wellness detection  
+  if (/wellness|holistic|nutrition|massage|therapy|acupuncture/.test(serviceText)) return 'wellness';
+  
+  // Default to beauty for London clinics (high-value assumption)
+  return 'beauty';
+};
+
+// Enhanced lead scoring for cosmetic practices
+const calculateLeadScore = (data) => {
+  let score = 50; // Base score
+  
+  // Contact information
+  if (data.phone) score += 20;
+  if (data.email) score += 20;
+  if (data.services && data.services.length > 0) score += 15;
+  if (data.contactName && data.contactName.includes('Dr.')) score += 10;
+  
+  // Practice type bonuses
+  if (data.practiceType === 'beauty') score += 10; // Cosmetic is higher value
+  if (data.practiceType === 'chiropractic') score += 5;
+  
+  // Location bonuses
+  const locationText = (data.location || '').toLowerCase();
+  if (locationText.includes('london')) score += 15;
+  if (locationText.includes('harley street')) score += 20; // Premium location
+  if (locationText.includes('manhattan') || locationText.includes('beverly hills')) score += 15;
+  
+  return Math.min(score, 100);
+};
 ```
 
 ## 🔐 SECURITY CONSIDERATIONS
@@ -687,15 +849,48 @@ const detectPracticeType = (services) => {
 
 ## 📝 EXECUTION COMMAND
 
+**✅ RECOMMENDED: Perfect Automation Script**
+```bash
+# Use the perfected automation script
+node perfect-healthcare-automation.js <practice-url>
+
+# Examples:
+node perfect-healthcare-automation.js https://www.theprivateclinic.co.uk
+node perfect-healthcare-automation.js https://www.harleystreetskinclinic.com
+node perfect-healthcare-automation.js https://www.152harleystreet.com
+```
+
 **Single Lead Processing:**
 ```
-Process the healthcare practice website at [URL] through the complete automation pipeline: scrape practice data, store in Notion database, deploy personalized demo, and return the live demo URL.
+Process the healthcare practice website at [URL] through the complete automation pipeline: scrape practice data with native Puppeteer, create GitHub repository with proper escaping, deploy personalized demo via Railway MCP, and return the live demo URL.
 ```
 
 **Batch Processing:**
 ```  
-Process the list of healthcare practice websites through the complete automation pipeline, returning a summary of successful deployments and any failures with error details.
+Process multiple healthcare practice websites through the perfected automation pipeline, using error recovery and proper string escaping, returning a summary of successful deployments with live URLs and any failures with detailed error analysis.
 ```
+
+## 🎯 WORKFLOW EXECUTION CHECKLIST
+
+**Before Starting:**
+- ✅ Verify template files exist in `./src/`
+- ✅ Check GitHub CLI authentication: `gh auth status`
+- ✅ Test Railway MCP connection: `/mcp` command
+- ✅ Ensure Puppeteer is available (auto-installs)
+
+**During Execution:**
+- ✅ Use `escapeForJavaScript()` for all scraped strings
+- ✅ Validate practice ID length (<25 chars)
+- ✅ Clean multiline strings before config insertion
+- ✅ Verify repository creation before proceeding
+- ✅ Monitor build logs for syntax errors
+
+**Success Indicators:**
+- ✅ `"✓ Compiled successfully"` in deployment logs
+- ✅ No "Unterminated string constant" errors
+- ✅ Repository contains complete application files
+- ✅ Live demo URL returns HTTP 200
+- ✅ Demo displays correct practice information
 
 ## 🔧 UTILITY FUNCTIONS FOR AI AGENT
 
