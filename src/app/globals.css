@@ -275,5 +275,21 @@ body {
 
 /* Force CSS rebuild - Railway deployment fix */
 .css-rebuild-force {
-  content: "v2024-08-04-10:00";
+  content: "v2025-08-05-15:30";
+}
+
+/* Additional Railway CSS fix - ensure all styles load */
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  
+  body {
+    @apply bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 text-gray-900;
+  }
+}
+
+/* Force Tailwind utilities to load */
+.railway-css-fix {
+  @apply bg-white text-gray-900 p-4 rounded-lg shadow-lg;
 }

@@ -11,6 +11,16 @@ const nextConfig: NextConfig = {
     // your project has type errors.
     ignoreBuildErrors: true,
   },
+  // Railway deployment optimizations
+  output: 'standalone',
+  experimental: {
+    // Optimize CSS loading
+    optimizeCss: true,
+  },
+  // Force CSS rebuilds - ARENA FYSIO DIRECT FIX
+  generateBuildId: async () => {
+    return `arenafysio-fixed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  },
   /* config options here */
 };
 
