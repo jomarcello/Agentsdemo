@@ -11,6 +11,17 @@ const nextConfig: NextConfig = {
     // your project has type errors.
     ignoreBuildErrors: true,
   },
+  // CRITICAL FIX: Force CSS cache bypass for Railway deployment
+  generateBuildId: async () => {
+    return `build-${Date.now()}-css-fix`
+  },
+  // Force static optimization to include all Tailwind classes
+  experimental: {
+    optimizeCss: true,
+  },
+  // Ensure all CSS is generated for production
+  productionBrowserSourceMaps: false,
+  poweredByHeader: false,
   /* config options here */
 };
 

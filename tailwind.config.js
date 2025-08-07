@@ -7,7 +7,7 @@ module.exports = {
     './src/lib/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   safelist: [
-    // Healthcare dynamic classes
+    // CRITICAL: Force all healthcare dynamic classes
     'from-emerald-600', 'to-green-600', 'from-emerald-700', 'to-green-700',
     'from-pink-600', 'to-purple-600', 'from-pink-700', 'to-purple-700', 
     'from-blue-600', 'to-indigo-600', 'from-blue-700', 'to-indigo-700',
@@ -17,23 +17,64 @@ module.exports = {
     'hover:from-emerald-700', 'hover:to-green-700',
     'hover:from-pink-700', 'hover:to-purple-700',
     'hover:from-blue-700', 'hover:to-indigo-700',
-    // Layout classes
-    'bg-gradient-to-r', 'bg-gradient-to-br', 'bg-gradient-to-l',
-    'shadow-lg', 'shadow-xl', 'rounded-lg', 'rounded-xl', 'rounded-2xl',
-    'p-4', 'p-6', 'p-8', 'px-4', 'px-6', 'px-8', 'py-2', 'py-4', 'py-6',
-    'mb-4', 'mb-6', 'mb-8', 'mt-4', 'mt-6', 'mt-8',
-    'text-white', 'text-gray-800', 'text-gray-600', 'text-gray-900',
-    'bg-white', 'bg-gray-50', 'bg-gray-100', 'bg-gray-200',
-    'border', 'border-gray-200', 'border-gray-300',
-    'flex', 'items-center', 'justify-center', 'space-x-2', 'space-x-4',
-    'w-full', 'h-full', 'max-w-4xl', 'max-w-6xl', 'mx-auto',
-    'grid', 'grid-cols-1', 'grid-cols-2', 'grid-cols-3', 'md:grid-cols-2', 'lg:grid-cols-3',
-    'gap-4', 'gap-6', 'gap-8',
-    'font-bold', 'font-semibold', 'font-medium',
-    'text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl',
-    'transition-all', 'duration-200', 'duration-300',
-    'hover:shadow-lg', 'hover:shadow-xl', 'hover:scale-105',
-    'animate-pulse', 'animate-bounce',
+    // Background gradients - FORCE GENERATION
+    'bg-gradient-to-r', 'bg-gradient-to-br', 'bg-gradient-to-l', 'bg-gradient-to-t', 'bg-gradient-to-b',
+    'from-blue-50', 'via-indigo-50', 'to-blue-100',
+    'from-blue-100', 'via-indigo-100', 'to-purple-100',
+    // Shadows and borders
+    'shadow-sm', 'shadow-md', 'shadow-lg', 'shadow-xl', 'shadow-2xl',
+    'rounded-lg', 'rounded-xl', 'rounded-2xl', 'rounded-full',
+    'border', 'border-gray-100', 'border-gray-200', 'border-gray-300',
+    // Spacing - CRITICAL for layout
+    'p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6', 'p-8', 'p-10', 'p-12',
+    'px-2', 'px-3', 'px-4', 'px-6', 'px-8', 'px-10', 'px-12',
+    'py-1', 'py-2', 'py-3', 'py-4', 'py-6', 'py-8', 'py-10', 'py-12',
+    'm-1', 'm-2', 'm-3', 'm-4', 'm-6', 'm-8', 'mx-auto',
+    'mt-2', 'mt-4', 'mt-6', 'mt-8', 'mt-10', 'mt-12',
+    'mb-2', 'mb-4', 'mb-6', 'mb-8', 'mb-10', 'mb-12',
+    // Colors - ALL variants
+    'text-white', 'text-black', 'text-gray-50', 'text-gray-100', 'text-gray-200',
+    'text-gray-300', 'text-gray-400', 'text-gray-500', 'text-gray-600', 
+    'text-gray-700', 'text-gray-800', 'text-gray-900',
+    'bg-white', 'bg-black', 'bg-gray-50', 'bg-gray-100', 'bg-gray-200',
+    'bg-blue-50', 'bg-blue-100', 'bg-blue-200', 'bg-blue-500', 'bg-blue-600', 'bg-blue-700',
+    'bg-indigo-50', 'bg-indigo-100', 'bg-indigo-600', 'bg-indigo-700',
+    'bg-green-50', 'bg-green-100', 'bg-green-500', 'bg-green-600', 'bg-green-700',
+    // Hover states
+    'hover:bg-blue-700', 'hover:bg-indigo-700', 'hover:bg-green-700',
+    'hover:shadow-lg', 'hover:shadow-xl', 'hover:scale-105', 'hover:scale-110',
+    // Layout - FORCE GRID CLASSES
+    'flex', 'inline-flex', 'items-center', 'items-start', 'items-end',
+    'justify-center', 'justify-start', 'justify-end', 'justify-between',
+    'space-x-1', 'space-x-2', 'space-x-3', 'space-x-4', 'space-x-6', 'space-x-8',
+    'space-y-1', 'space-y-2', 'space-y-3', 'space-y-4', 'space-y-6', 'space-y-8',
+    'w-4', 'w-6', 'w-8', 'w-10', 'w-12', 'w-16', 'w-20', 'w-24', 'w-32', 'w-48', 'w-full',
+    'h-4', 'h-6', 'h-8', 'h-10', 'h-12', 'h-16', 'h-20', 'h-24', 'h-32', 'h-48', 'h-full',
+    'max-w-xs', 'max-w-sm', 'max-w-md', 'max-w-lg', 'max-w-xl', 'max-w-2xl',
+    'max-w-3xl', 'max-w-4xl', 'max-w-5xl', 'max-w-6xl', 'max-w-7xl',
+    'grid', 'grid-cols-1', 'grid-cols-2', 'grid-cols-3', 'grid-cols-4',
+    'sm:grid-cols-2', 'md:grid-cols-2', 'md:grid-cols-3', 'lg:grid-cols-3', 'lg:grid-cols-4',
+    'gap-1', 'gap-2', 'gap-3', 'gap-4', 'gap-6', 'gap-8', 'gap-10', 'gap-12',
+    // Typography - FORCE ALL SIZES
+    'font-thin', 'font-light', 'font-normal', 'font-medium', 'font-semibold', 'font-bold', 'font-extrabold',
+    'text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl', 'text-5xl',
+    'leading-tight', 'leading-snug', 'leading-normal', 'leading-relaxed', 'leading-loose',
+    // Animations
+    'transition-all', 'transition-colors', 'transition-transform', 'transition-shadow',
+    'duration-75', 'duration-100', 'duration-150', 'duration-200', 'duration-300', 'duration-500',
+    'ease-in', 'ease-out', 'ease-in-out',
+    'animate-pulse', 'animate-bounce', 'animate-spin',
+    'transform', 'scale-100', 'scale-105', 'scale-110', 'scale-95',
+    'translate-x-0', 'translate-y-0', '-translate-y-1', 'translate-y-1',
+    // States
+    'cursor-pointer', 'cursor-default',
+    'opacity-0', 'opacity-25', 'opacity-50', 'opacity-75', 'opacity-100',
+    'invisible', 'visible',
+    'overflow-hidden', 'overflow-auto', 'overflow-scroll',
+    // Focus states
+    'focus:outline-none', 'focus:ring-1', 'focus:ring-2', 'focus:ring-4',
+    'focus:ring-blue-500', 'focus:ring-indigo-500', 'focus:ring-green-500',
+    'focus:ring-offset-1', 'focus:ring-offset-2',
   ],
   theme: {
     extend: {

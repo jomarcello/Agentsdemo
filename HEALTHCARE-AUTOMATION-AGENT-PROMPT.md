@@ -70,12 +70,12 @@ Backup: Railway MCP (Stable via Claude Code)
 Repository: GitHub CLI (Most Reliable)
 ```
 
-### **Web Scraping (Direct Puppeteer)**
-**Recommended Method: Native Puppeteer**
-- Auto-installs via `npm install puppeteer --no-save`
-- More reliable than MCP browser automation
+### **Web Scraping (Playwright MCP)**
+**Recommended Method: Playwright MCP via Claude Code**
+- Uses `mcp__playwright__browser_navigate` for navigation
+- Stable browser automation through Claude Code MCP integration
 - Better error handling and retry logic
-- Direct JavaScript execution for data extraction
+- Direct JavaScript execution via `mcp__playwright__browser_evaluate`
 
 **Key Scraping Targets:**
 - Company name: `h1, .practice-name, .clinic-name, .company-name`
@@ -140,43 +140,40 @@ Service: jason-tan-swe-railway-mcp (via Claude Code MCP)
 
 ### **PHASE 0: Lead Discovery & Scraping**
 
-1. **✅ IMPROVED: Direct Puppeteer Scraping**
+1. **✅ IMPROVED: Playwright MCP Scraping**
    ```javascript
-   // Use native Puppeteer for reliability
-   const puppeteer = require('puppeteer');
-   
-   const browser = await puppeteer.launch({ headless: true });
-   const page = await browser.newPage();
-   await page.goto(TARGET_URL, { waitUntil: 'networkidle2' });
+   // Use Playwright MCP via Claude Code for reliability
+   await mcp__playwright__browser_navigate({ url: TARGET_URL });
+   await mcp__playwright__browser_wait_for({ time: 3 }); // Wait for page load
    ```
 
 2. **✅ ENHANCED: Robust Data Extraction**
    ```javascript
-   const extractedData = await page.evaluate(() => {
-     const getText = (selector) => {
-       const el = document.querySelector(selector);
-       return el ? el.textContent.trim() : '';
-     };
-     
-     const getAllText = (selectors) => {
-       for (const selector of selectors) {
-         const text = getText(selector);
-         if (text && text.length > 0) return text;
-       }
-       return '';
-     };
-     
-     return {
-       company: getAllText(['h1', '.practice-name', '.clinic-name', '.company-name', '.brand-name']) || 'Unknown Practice',
-       contactName: getAllText(['.doctor-name', '.dr-name', 'h2', '.contact-name', '.owner-name']) || 'Dr. Unknown',
-       phone: document.body.textContent.match(/\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}/)?.[0] || '',
-       email: document.body.textContent.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/)?.[0] || '',
-       location: getAllText(['.address', '.location', '.contact-address']) || 'Unknown Location',
-       services: Array.from(document.querySelectorAll('.service, .treatment, .procedure, .offering')).map(el => el.textContent.trim()).slice(0, 5)
-     };
+   const extractedData = await mcp__playwright__browser_evaluate({
+     function: `() => {
+       const getText = (selector) => {
+         const el = document.querySelector(selector);
+         return el ? el.textContent.trim() : '';
+       };
+       
+       const getAllText = (selectors) => {
+         for (const selector of selectors) {
+           const text = getText(selector);
+           if (text && text.length > 0) return text;
+         }
+         return '';
+       };
+       
+       return {
+         company: getAllText(['h1', '.practice-name', '.clinic-name', '.company-name', '.brand-name']) || 'Unknown Practice',
+         contactName: getAllText(['.doctor-name', '.dr-name', 'h2', '.contact-name', '.owner-name']) || 'Dr. Unknown',
+         phone: document.body.textContent.match(/\\\\(?\\\\d{3}\\\\)?[-.\\\\s]?\\\\d{3}[-.\\\\s]?\\\\d{4}/)?.[0] || '',
+         email: document.body.textContent.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\\\.[a-zA-Z]{2,}/)?.[0] || '',
+         location: getAllText(['.address', '.location', '.contact-address']) || 'Unknown Location',
+         services: Array.from(document.querySelectorAll('.service, .treatment, .procedure, .offering')).map(el => el.textContent.trim()).slice(0, 5)
+       };
+     }`
    });
-   
-   await browser.close();
    ```
 
 3. **Lead Enrichment**
@@ -715,8 +712,8 @@ if (finalStatus === 'SUCCESS') {
 ### **Scraping Failures**
 ```javascript
 if (!extractedData.company || !extractedData.contactName) {
-  // Try alternative selectors
-  // Fall back to cloudflare-playwright if local fails
+  // Try alternative selectors with Playwright
+  // Take screenshot for debugging: await mcp__playwright__browser_take_screenshot({ name: 'debug-scraping' })
   // Log incomplete data but continue pipeline
 }
 ```
@@ -862,7 +859,7 @@ node perfect-healthcare-automation.js https://www.152harleystreet.com
 
 **Single Lead Processing:**
 ```
-Process the healthcare practice website at [URL] through the complete automation pipeline: scrape practice data with native Puppeteer, create GitHub repository with proper escaping, deploy personalized demo via Railway MCP, and return the live demo URL.
+Process the healthcare practice website at [URL] through the complete automation pipeline: scrape practice data with Playwright MCP, create GitHub repository with proper escaping, deploy personalized demo via Railway MCP, and return the live demo URL.
 ```
 
 **Batch Processing:**
@@ -876,7 +873,7 @@ Process multiple healthcare practice websites through the perfected automation p
 - ✅ Verify template files exist in `./src/`
 - ✅ Check GitHub CLI authentication: `gh auth status`
 - ✅ Test Railway MCP connection: `/mcp` command
-- ✅ Ensure Puppeteer is available (auto-installs)
+- ✅ Ensure Playwright MCP is available via Claude Code
 
 **During Execution:**
 - ✅ Use `escapeForJavaScript()` for all scraped strings
