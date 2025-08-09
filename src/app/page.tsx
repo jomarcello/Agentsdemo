@@ -90,29 +90,28 @@ export default function Home() {
             Interactive Demo Presentation
           </div>
           <h2 className="text-3xl sm:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
-            {practiceConfig.branding.tagline}
+            Meet Robin: Your AI 
             <br />
             <span className={`text-2xl sm:text-4xl bg-gradient-to-r ${colorClasses.gradient} bg-clip-text text-transparent`}>
-              Robin is Live & Ready
+              Appointment Assistant
             </span>
           </h2>
           <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto px-2 mb-6">
-            Experience how <strong>Robin</strong>, your AI {practiceConfig.type} assistant, provides 24/7 appointment scheduling 
-            for {practiceConfig.name} patients. This demo showcases the voice technology that can revolutionize 
-            your practice's patient interaction.
+            Experience how <strong>Robin</strong> handles patient calls with human-like conversations, schedules appointments instantly, 
+            and answers questions about {practiceConfig.name} services - completely automated, 24/7.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <div className={`flex items-center gap-2 ${colorClasses.accent}`}>
               <CheckCircle className="w-5 h-5" />
-              <span className="font-medium">{practiceConfig.doctor}'s Practice</span>
+              <span className="font-medium">24/7 Phone Coverage</span>
             </div>
             <div className={`flex items-center gap-2 ${practiceConfig.branding.primaryColor === 'emerald' ? 'text-emerald-700' : 'text-indigo-700'}`}>
               <CheckCircle className="w-5 h-5" />
-              <span className="font-medium">{practiceConfig.services.length} {practiceConfig.type.charAt(0).toUpperCase() + practiceConfig.type.slice(1)} Services Available</span>
+              <span className="font-medium">Instant Appointment Booking</span>
             </div>
             <div className={`flex items-center gap-2 ${colorClasses.accent}`}>
               <CheckCircle className="w-5 h-5" />
-              <span className="font-medium">Advanced AI Technology</span>
+              <span className="font-medium">Human-Like Conversations</span>
             </div>
           </div>
         </div>
