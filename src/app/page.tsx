@@ -396,7 +396,7 @@ export default function Home() {
         </div>
       </main>
 
-      {/* CTA Section - Book Implementation Call */}
+      {/* CTA Section - Free Discovery Call */}
       <section className={`${colorClasses.gradientBg} py-12 sm:py-16`}>
         <div className="max-w-4xl mx-auto text-center text-white px-4 sm:px-6">
           <div className="mb-6">
@@ -423,13 +423,13 @@ export default function Home() {
 
           <div className="space-y-4">
             <a
-              href="https://calendly.com/your-calendar-link"
+              href="https://calendly.com/pierre-bjorlin"
               target="_blank"
               rel="noopener noreferrer" 
               className="inline-flex items-center gap-3 bg-white text-gray-900 px-8 py-4 rounded-xl font-bold text-xl hover:bg-gray-100 transition-all duration-200 shadow-xl hover:shadow-2xl hover:scale-105"
             >
               <Calendar className="w-6 h-6" />
-              Book Your Implementation Call
+              Free Discovery Call
             </a>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-white/80">
               <span className="flex items-center gap-2">
