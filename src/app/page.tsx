@@ -90,7 +90,7 @@ export default function Home() {
             Interactive Demo Presentation
           </div>
           <h2 className="text-3xl sm:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
-            Your AI {practiceConfig.branding.tagline.replace('Your ', '')}
+            {practiceConfig.branding.tagline}
             <br />
             <span className={`text-2xl sm:text-4xl bg-gradient-to-r ${colorClasses.gradient} bg-clip-text text-transparent`}>
               Robin is Live & Ready
