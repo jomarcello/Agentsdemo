@@ -456,7 +456,7 @@ export default function Home() {
               {practiceConfig.name} AI Voice Agent Demo - Experience the Future of {practiceConfig.type.charAt(0).toUpperCase() + practiceConfig.type.slice(1)} Scheduling
             </p>
             <p className="text-xs sm:text-sm text-gray-500 mt-2">
-              {practiceConfig.doctor} • {practiceConfig.location.split(',').slice(-2).join(',').trim()} • Powered by AI Technology
+              {practiceConfig.doctor} • Powered by AI Technology
             </p>
           </div>
         </div>
