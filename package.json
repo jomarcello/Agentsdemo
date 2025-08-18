@@ -1,9 +1,9 @@
 {
-  "name": "healthcare-ai-voice-agent-demo",
+  "name": "leadsprint-ai",
   "version": "1.0.0",
   "private": true,
-  "description": "Scalable multi-tenant AI voice assistant platform designed to support hundreds of healthcare practices for lead generation and practice onboarding",
-  "author": "Healthcare AI Demo Team",
+  "description": "Leadsprint AI - Automated Healthcare Lead Generation and Demo Deployment Platform",
+  "author": "Leadsprint AI Team",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -30,22 +30,23 @@
     "railway:deploy": "./scripts/railway-cli-deploy.sh"
   },
   "keywords": [
-    "healthcare",
-    "ai",
+    "leadsprint-ai",
+    "healthcare-automation",
+    "ai-lead-generation",
     "voice-assistant",
     "nextjs",
     "elevenlabs",
     "openai",
     "multi-tenant",
     "practice-management",
-    "lead-generation",
+    "automated-deployment",
     "saas-platform",
     "scalable-architecture",
     "healthcare-saas",
     "practice-onboarding",
     "white-label",
     "automation",
-    "tunnel-management"
+    "railway-deployment"
   ],
   "dependencies": {
     "@google-cloud/speech": "^7.2.0",
@@ -83,7 +84,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jomarcello/Agentsdemo.git"
+    "url": "https://github.com/jomarcello/leadsprint-ai.git"
   },
   "license": "MIT"
 }
